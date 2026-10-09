@@ -13,7 +13,8 @@
     "package": "npm run build && python3 scripts/package.py",
     "format": "prettier --write src tests docs scripts/*.mjs *.json *.css *.mjs *.ts README.md CHANGELOG.md",
     "format:check": "prettier --check src tests docs scripts/*.mjs *.json *.css *.mjs *.ts README.md CHANGELOG.md",
-    "guidelines": "node scripts/guidelines.mjs"
+    "guidelines": "node scripts/guidelines.mjs",
+    "version": "node scripts/version-bump.mjs && git add manifest.json versions.json"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.7",
