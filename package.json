@@ -1,0 +1,34 @@
+{
+  "name": "flowstitch",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Your notes and tasks, seamlessly connected.",
+  "license": "MIT",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src tests",
+    "test": "vitest run",
+    "build": "npm run typecheck && node scripts/build.mjs",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build && npm run guidelines",
+    "package": "npm run build && python3 scripts/package.py",
+    "format": "prettier --write src tests docs scripts/*.mjs *.json *.css *.mjs *.ts README.md CHANGELOG.md",
+    "format:check": "prettier --check src tests docs scripts/*.mjs *.json *.css *.mjs *.ts README.md CHANGELOG.md",
+    "guidelines": "node scripts/guidelines.mjs"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^21.1.7",
+    "@types/node": "^24.19.1",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.12.0",
+    "jsdom": "^30.1.2",
+    "obsidian": "1.14.4",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^5.0.3"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  }
+}

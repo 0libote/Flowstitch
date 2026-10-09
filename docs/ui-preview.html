@@ -1,0 +1,380 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Flowstitch UI harness</title>
+    <style>
+      :root {
+        --text-normal: #25232b;
+        --text-muted: #787380;
+        --text-accent: #7660bd;
+        --text-error: #b95252;
+        --text-warning: #aa772d;
+        --background-secondary: #f5f3f8;
+        --background-modifier-border: #e5e0ea;
+        --background-modifier-active-hover: #ede8f7;
+        --interactive-accent: #7660bd;
+        --font-ui-small: 14px;
+        --font-ui-smaller: 12px;
+        --font-ui-medium: 16px;
+        --font-ui-large: 24px;
+        --font-semibold: 600;
+        --radius-s: 6px;
+      }
+      body {
+        font-family: system-ui;
+        margin: 0;
+        background: #faf9fc;
+        color: var(--text-normal);
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+        border: 1px solid var(--background-modifier-border);
+        border-radius: 6px;
+        padding: 6px 10px;
+        background: #fff;
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --text-normal: #e8e4ed;
+          --text-muted: #a49dad;
+          --text-accent: #b9a4ec;
+          --background-secondary: #28252e;
+          --background-modifier-border: #3a3542;
+          --background-modifier-active-hover: #383043;
+          --interactive-accent: #b9a4ec;
+        }
+        body {
+          background: #211e26;
+        }
+        button,
+        input,
+        select {
+          background: #28252e;
+        }
+      }
+      .mod-cta {
+        background: #7660bd;
+        color: white;
+        border-color: transparent;
+      }
+      .harness-label {
+        font-size: 12px;
+        color: var(--text-muted);
+        padding: 12px 16px;
+        background: var(--background-secondary);
+      }
+      .flowstitch {
+        color: var(--text-normal);
+        padding: 16px;
+        font-size: var(--font-ui-small);
+        max-width: 1000px;
+        margin-inline: auto;
+      }
+      .flowstitch-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+      .flowstitch-header h2 {
+        margin: 0 0 4px;
+        font-size: var(--font-ui-large);
+        letter-spacing: -0.02em;
+      }
+      .flowstitch-muted {
+        color: var(--text-muted);
+        margin: 0;
+        font-size: var(--font-ui-smaller);
+      }
+      .flowstitch-actions,
+      .flowstitch-row-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .flowstitch-status {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        color: var(--text-muted);
+        font-size: var(--font-ui-smaller);
+        padding: 10px 0;
+        border-top: 1px solid var(--background-modifier-border);
+      }
+      .flowstitch-status span:first-child {
+        color: var(--text-accent);
+      }
+      .flowstitch-tabs {
+        display: flex;
+        gap: 3px;
+        overflow-x: auto;
+        padding: 8px 0 12px;
+        border-bottom: 1px solid var(--background-modifier-border);
+      }
+      .flowstitch-tabs button {
+        box-shadow: none;
+        background: transparent;
+        color: var(--text-muted);
+        padding: 6px 12px;
+        border-radius: var(--radius-s);
+      }
+      .flowstitch-tabs button.is-active {
+        background: var(--background-modifier-active-hover);
+        color: var(--text-accent);
+      }
+      .flowstitch-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 14px 0 8px;
+      }
+      .flowstitch-search {
+        flex: 1;
+        min-width: 140px;
+      }
+      .flowstitch-summary {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+        color: var(--text-muted);
+        font-size: var(--font-ui-smaller);
+        padding: 8px 0;
+      }
+      .flowstitch-group {
+        color: var(--text-muted);
+        font-size: var(--font-ui-smaller);
+        font-weight: var(--font-semibold);
+        margin: 20px 0 8px;
+      }
+      .flowstitch-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 4px;
+        border-bottom: 1px solid var(--background-modifier-border);
+        border-radius: var(--radius-s);
+      }
+      .flowstitch-row:hover {
+        background: var(--background-secondary);
+      }
+      .flowstitch-row input[type="checkbox"] {
+        flex-shrink: 0;
+      }
+      .flowstitch-row.priority-4 input {
+        accent-color: var(--text-error);
+      }
+      .flowstitch-row.priority-3 input {
+        accent-color: var(--text-warning);
+      }
+      .flowstitch-task-body {
+        flex: 1;
+        min-width: 0;
+      }
+      .flowstitch-task-title {
+        text-align: left;
+        display: block;
+        background: transparent;
+        box-shadow: none;
+        border: 0;
+        padding: 0;
+        height: auto;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        color: var(--text-normal);
+        font-size: var(--font-ui-small);
+        line-height: 1.5;
+      }
+      .flowstitch-task-title:disabled {
+        opacity: 1;
+        color: var(--text-normal);
+      }
+      .flowstitch-task-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 4px;
+        color: var(--text-muted);
+        font-size: var(--font-ui-smaller);
+      }
+      .flowstitch-row-actions button {
+        background: transparent;
+        box-shadow: none;
+        font-size: var(--font-ui-smaller);
+        padding: 3px 7px;
+      }
+      .flowstitch-empty {
+        text-align: center;
+        padding: 40px 12px;
+        color: var(--text-muted);
+      }
+      .flowstitch-preset {
+        padding: 16px 0;
+        border-bottom: 1px solid var(--background-modifier-border);
+      }
+      .flowstitch-preset h3 {
+        margin: 0 0 6px;
+        font-size: var(--font-ui-medium);
+      }
+      .flowstitch-preset p {
+        margin-bottom: 12px;
+      }
+      .flowstitch-report {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        user-select: text;
+        max-height: 60vh;
+        overflow: auto;
+      }
+      .flowstitch-conflict {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--background-modifier-border);
+      }
+      .flowstitch-conflict button {
+        margin: 4px;
+      }
+      .flowstitch-wide input {
+        min-width: 240px;
+      }
+      .flowstitch button:focus-visible,
+      .flowstitch input:focus-visible,
+      .flowstitch select:focus-visible {
+        outline: 2px solid var(--interactive-accent);
+        outline-offset: 2px;
+      }
+      @media (max-width: 480px) {
+        .flowstitch {
+          padding: 10px;
+        }
+        .flowstitch-row {
+          gap: 8px;
+        }
+        .flowstitch-row-actions {
+          gap: 0;
+        }
+        .flowstitch-summary span:last-child {
+          width: 100%;
+        }
+        .flowstitch-header {
+          align-items: flex-start;
+        }
+      }
+      :root {
+        --text-normal: var(--foreground, #25232b);
+        --text-muted: var(--muted-foreground, #787380);
+        --background-secondary: var(--secondary, #f5f3f8);
+        --background-modifier-border: var(--border, #e5e0ea);
+      }
+      body {
+        background: var(--background, #faf9fc);
+      }
+      button,
+      input,
+      select {
+        background: var(--card, #fff);
+      }
+      .mod-cta {
+        background: #7660bd;
+      }
+    </style>
+  </head>
+  <body>
+    <p class="harness-label">
+      UI harness • fixture data • actual Dashboard DOM • not an Obsidian or live
+      Todoist test
+    </p>
+    <div class="flowstitch">
+      <div class="flowstitch-header">
+        <div>
+          <h2>Flowstitch</h2>
+          <p class="flowstitch-muted">
+            Your notes and tasks, seamlessly connected.
+          </p>
+        </div>
+        <div class="flowstitch-actions">
+          <button class="mod-cta" type="button">+ Capture</button
+          ><button type="button">Refresh</button
+          ><button type="button">Diagnostics</button>
+        </div>
+      </div>
+      <div class="flowstitch-status" role="status" aria-live="polite">
+        <span>Cached preview</span><span>0 pending · 0 conflicts</span>
+      </div>
+      <div class="flowstitch-tabs" role="tablist" aria-label="Task views">
+        <button class="is-active" type="button" role="tab" aria-selected="true">
+          Today</button
+        ><button type="button" role="tab" aria-selected="false">Upcoming</button
+        ><button type="button" role="tab" aria-selected="false">Projects</button
+        ><button type="button" role="tab" aria-selected="false">Inbox</button
+        ><button type="button" role="tab" aria-selected="false">
+          Templates</button
+        ><button type="button" role="tab" aria-selected="false">
+          Completed
+        </button>
+      </div>
+      <div class="flowstitch-toolbar">
+        <input
+          class="flowstitch-search"
+          type="search"
+          placeholder="Search cached tasks…"
+          aria-label="Search tasks"
+        /><select aria-label="Filter project">
+          <option value="">All projects</option>
+          <option value="work">Work</option></select
+        ><button type="button">Apply Todoist filter</button>
+      </div>
+      <div class="flowstitch-summary">
+        <span>2 tasks</span><span>Work 09:00–17:30 · Lunch 12:00–13:00</span>
+      </div>
+      <div class="flowstitch-list" role="list">
+        <h3 class="flowstitch-group">Tasks</h3>
+        <div class="flowstitch-row priority-4" role="listitem">
+          <input type="checkbox" aria-label="Complete Review supplier prices" />
+          <div class="flowstitch-task-body">
+            <button class="flowstitch-task-title" type="button">
+              Review supplier prices
+            </button>
+            <div class="flowstitch-task-meta">
+              <span>2026-10-09 13:30 ↻</span><span>Work</span
+              ><span>#supplier</span>
+            </div>
+          </div>
+          <div class="flowstitch-row-actions">
+            <button type="button" aria-label="Open in Todoist">↗</button
+            ><button type="button" aria-label="Task actions">⋯</button>
+          </div>
+        </div>
+        <div class="flowstitch-row priority-2" role="listitem">
+          <input
+            type="checkbox"
+            aria-label="Complete Prepare Website News article"
+          />
+          <div class="flowstitch-task-body">
+            <button class="flowstitch-task-title" type="button">
+              Prepare Website News article
+            </button>
+            <div class="flowstitch-task-meta">
+              <span>2026-10-09 15:00</span><span>Work</span
+              ><span>#supplier</span>
+            </div>
+          </div>
+          <div class="flowstitch-row-actions">
+            <button type="button" aria-label="Open in Todoist">↗</button
+            ><button type="button" aria-label="Task actions">⋯</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,199 @@
+.flowstitch {
+  color: var(--text-normal);
+  padding: 16px;
+  font-size: var(--font-ui-small);
+  max-width: 1000px;
+  margin-inline: auto;
+}
+.flowstitch-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.flowstitch-header h2 {
+  margin: 0 0 4px;
+  font-size: var(--font-ui-large);
+  letter-spacing: -0.02em;
+}
+.flowstitch-muted {
+  color: var(--text-muted);
+  margin: 0;
+  font-size: var(--font-ui-smaller);
+}
+.flowstitch-actions,
+.flowstitch-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.flowstitch-status {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  padding: 10px 0;
+  border-top: 1px solid var(--background-modifier-border);
+}
+.flowstitch-status span:first-child {
+  color: var(--text-accent);
+}
+.flowstitch-tabs {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+  padding: 8px 0 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.flowstitch-tabs button {
+  box-shadow: none;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 6px 12px;
+  border-radius: var(--radius-s);
+}
+.flowstitch-tabs button.is-active {
+  background: var(--background-modifier-active-hover);
+  color: var(--text-accent);
+}
+.flowstitch-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 0 8px;
+}
+.flowstitch-search {
+  flex: 1;
+  min-width: 140px;
+}
+.flowstitch-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  padding: 8px 0;
+}
+.flowstitch-group {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  margin: 20px 0 8px;
+}
+.flowstitch-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+}
+.flowstitch-row:hover {
+  background: var(--background-secondary);
+}
+.flowstitch-row input[type="checkbox"] {
+  flex-shrink: 0;
+}
+.flowstitch-row.priority-4 input {
+  accent-color: var(--text-error);
+}
+.flowstitch-row.priority-3 input {
+  accent-color: var(--text-warning);
+}
+.flowstitch-task-body {
+  flex: 1;
+  min-width: 0;
+}
+.flowstitch-task-title {
+  text-align: left;
+  display: block;
+  background: transparent;
+  box-shadow: none;
+  border: 0;
+  padding: 0;
+  height: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  line-height: 1.5;
+}
+.flowstitch-task-title:disabled {
+  opacity: 1;
+  color: var(--text-normal);
+}
+.flowstitch-task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+.flowstitch-row-actions button {
+  background: transparent;
+  box-shadow: none;
+  font-size: var(--font-ui-smaller);
+  padding: 3px 7px;
+}
+.flowstitch-empty {
+  text-align: center;
+  padding: 40px 12px;
+  color: var(--text-muted);
+}
+.flowstitch-preset {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.flowstitch-preset h3 {
+  margin: 0 0 6px;
+  font-size: var(--font-ui-medium);
+}
+.flowstitch-preset p {
+  margin-bottom: 12px;
+}
+.flowstitch-report {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+  max-height: 60vh;
+  overflow: auto;
+}
+.flowstitch-conflict {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+.flowstitch-conflict button {
+  margin: 4px;
+}
+.flowstitch-wide input {
+  min-width: 240px;
+}
+.flowstitch button:focus-visible,
+.flowstitch input:focus-visible,
+.flowstitch select:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+@media (max-width: 480px) {
+  .flowstitch {
+    padding: 10px;
+  }
+  .flowstitch-row {
+    gap: 8px;
+  }
+  .flowstitch-row-actions {
+    gap: 0;
+  }
+  .flowstitch-summary span:last-child {
+    width: 100%;
+  }
+  .flowstitch-header {
+    align-items: flex-start;
+  }
+}

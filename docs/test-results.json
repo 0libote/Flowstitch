@@ -1,0 +1,635 @@
+{
+  "numTotalTestSuites": 7,
+  "numPassedTestSuites": 7,
+  "numFailedTestSuites": 0,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 50,
+  "numPassedTests": 50,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1791549572078,
+  "success": true,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [],
+          "fullName": "registers functional command entrypoints and disposes listeners/commands on reload",
+          "status": "passed",
+          "title": "registers functional command entrypoints and disposes listeners/commands on reload",
+          "duration": 11.867547000000059,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        }
+      ],
+      "startTime": 1791549574418,
+      "endTime": 1791549574429.8674,
+      "status": "passed",
+      "message": "",
+      "name": "/home/oliver/Flowstitch/tests/integration/lifecycle.test.ts"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["durable incremental two-way engine"],
+          "fullName": "durable incremental two-way engine creates an opted-in checkbox once through repeated syncs and reload",
+          "status": "passed",
+          "title": "creates an opted-in checkbox once through repeated syncs and reload",
+          "duration": 28.562744000000066,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["durable incremental two-way engine"],
+          "fullName": "durable incremental two-way engine pulls title changes without touching surrounding text",
+          "status": "passed",
+          "title": "pulls title changes without touching surrounding text",
+          "duration": 2.846940000000018,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["durable incremental two-way engine"],
+          "fullName": "durable incremental two-way engine completes locally and pulls remote completion then reopens",
+          "status": "passed",
+          "title": "completes locally and pulls remote completion then reopens",
+          "duration": 4.649641000000088,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["durable incremental two-way engine"],
+          "fullName": "durable incremental two-way engine closes recurring occurrence once and resets the live checkbox without losing the rule",
+          "status": "passed",
+          "title": "closes recurring occurrence once and resets the live checkbox without losing the rule",
+          "duration": 3.393742999999972,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["durable incremental two-way engine"],
+          "fullName": "durable incremental two-way engine retains offline capture and recovers with the same UUID",
+          "status": "passed",
+          "title": "retains offline capture and recovers with the same UUID",
+          "duration": 5.955571999999961,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["durable incremental two-way engine"],
+          "fullName": "durable incremental two-way engine holds concurrent same-field edits for explicit resolution",
+          "status": "passed",
+          "title": "holds concurrent same-field edits for explicit resolution",
+          "duration": 5.008833999999979,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["durable incremental two-way engine"],
+          "fullName": "durable incremental two-way engine merges non-conflicting fields",
+          "status": "passed",
+          "title": "merges non-conflicting fields",
+          "duration": 8.576548000000003,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["durable incremental two-way engine"],
+          "fullName": "durable incremental two-way engine rename keeps remote task identity",
+          "status": "passed",
+          "title": "rename keeps remote task identity",
+          "duration": 1.9293689999999515,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["durable incremental two-way engine"],
+          "fullName": "durable incremental two-way engine leaves unopted tasks and unchanged notes alone",
+          "status": "passed",
+          "title": "leaves unopted tasks and unchanged notes alone",
+          "duration": 2.893715000000043,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["durable incremental two-way engine"],
+          "fullName": "durable incremental two-way engine stops further operations after unload",
+          "status": "passed",
+          "title": "stops further operations after unload",
+          "duration": 8.223731000000043,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": ["durable incremental two-way engine"],
+          "fullName": "durable incremental two-way engine never infers completion from remote deletion",
+          "status": "passed",
+          "title": "never infers completion from remote deletion",
+          "duration": 1.4933549999999514,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "dashboard edits update an already linked note after acknowledgement",
+          "status": "passed",
+          "title": "dashboard edits update an already linked note after acknowledgement",
+          "duration": 3.038081000000034,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "offline dashboard changes conflict with newer remote edits even without linked notes",
+          "status": "passed",
+          "title": "offline dashboard changes conflict with newer remote edits even without linked notes",
+          "duration": 1.567162000000053,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects duplicated creation markers across notes before sending",
+          "status": "passed",
+          "title": "rejects duplicated creation markers across notes before sending",
+          "duration": 1.7315100000000712,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "read-only engine fetches cache while refusing capture and vault mutations",
+          "status": "passed",
+          "title": "read-only engine fetches cache while refusing capture and vault mutations",
+          "duration": 1.0598990000000867,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects switching Todoist accounts before syncing any existing queue",
+          "status": "passed",
+          "title": "rejects switching Todoist accounts before syncing any existing queue",
+          "duration": 0.8622520000000122,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "lost acknowledgement retries the same command after server commit",
+          "status": "passed",
+          "title": "lost acknowledgement retries the same command after server commit",
+          "duration": 1.6330169999999953,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "does not rewrite a large set of ordinary notes",
+          "status": "passed",
+          "title": "does not rewrite a large set of ordinary notes",
+          "duration": 29.70323700000006,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "explicitly discards only rejected operations without deleting task or note content",
+          "status": "passed",
+          "title": "explicitly discards only rejected operations without deleting task or note content",
+          "duration": 1.6994680000000244,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "defers remote title replacements that would remove local context links or tags",
+          "status": "passed",
+          "title": "defers remote title replacements that would remove local context links or tags",
+          "duration": 1.6970340000000306,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        }
+      ],
+      "startTime": 1791549572634,
+      "endTime": 1791549572751.697,
+      "status": "passed",
+      "message": "",
+      "name": "/home/oliver/Flowstitch/tests/integration/sync.test.ts"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [],
+          "fullName": "renders cached tasks offline and sends completion through the engine",
+          "status": "passed",
+          "title": "renders cached tasks offline and sends completion through the engine",
+          "duration": 79.46361200000001,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "renders malicious Todoist content as inert text",
+          "status": "passed",
+          "title": "renders malicious Todoist content as inert text",
+          "duration": 12.725360999999793,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "searches cached tasks, switches views, and filters projects",
+          "status": "passed",
+          "title": "searches cached tasks, switches views, and filters projects",
+          "duration": 26.268727000000126,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "completed view retrieves actual history and provides reopen action",
+          "status": "passed",
+          "title": "completed view retrieves actual history and provides reopen action",
+          "duration": 14.79089399999998,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "capture queues a task with description, project and a source URI",
+          "status": "passed",
+          "title": "capture queues a task with description, project and a source URI",
+          "duration": 20.589306999999962,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "Website News launches a copy with optional steps and never mutates a master",
+          "status": "passed",
+          "title": "Website News launches a copy with optional steps and never mutates a master",
+          "duration": 11.17196100000001,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "writes a labelled desktop/mobile visual harness from production dashboard markup",
+          "status": "passed",
+          "title": "writes a labelled desktop/mobile visual harness from production dashboard markup",
+          "duration": 26.29365800000005,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "capture stores an explicitly chosen heading link",
+          "status": "passed",
+          "title": "capture stores an explicitly chosen heading link",
+          "duration": 8.023216000000048,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "retains a historical task identity for explicit reopen on a fresh installation",
+          "status": "passed",
+          "title": "retains a historical task identity for explicit reopen on a fresh installation",
+          "duration": 12.40285300000005,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        }
+      ],
+      "startTime": 1791549573800,
+      "endTime": 1791549574012.4028,
+      "status": "passed",
+      "message": "",
+      "name": "/home/oliver/Flowstitch/tests/integration/ui.test.ts"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [],
+          "fullName": "uses v1 POST form sync and stable UUIDs; does not log secrets",
+          "status": "passed",
+          "title": "uses v1 POST form sync and stable UUIDs; does not log secrets",
+          "duration": 6.4082520000000045,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects batches above official limit",
+          "status": "passed",
+          "title": "rejects batches above official limit",
+          "duration": 3.870721000000003,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "honours Retry-After without leaking server body",
+          "status": "passed",
+          "title": "honours Retry-After without leaking server body",
+          "duration": 1.43843099999998,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "does not call transport with missing credentials",
+          "status": "passed",
+          "title": "does not call transport with missing credentials",
+          "duration": 3.2798009999999636,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "paginates history items and marks occurrences completed",
+          "status": "passed",
+          "title": "paginates history items and marks occurrences completed",
+          "duration": 2.897562999999991,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects malformed tasks and repeated pagination cursors",
+          "status": "passed",
+          "title": "rejects malformed tasks and repeated pagination cursors",
+          "duration": 1.4339239999999904,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        }
+      ],
+      "startTime": 1791549573074,
+      "endTime": 1791549573093.4338,
+      "status": "passed",
+      "message": "",
+      "name": "/home/oliver/Flowstitch/tests/unit/api.test.ts"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [],
+          "fullName": "converts London wall clocks across spring and autumn DST",
+          "status": "passed",
+          "title": "converts London wall clocks across spring and autumn DST",
+          "duration": 53.06466400000005,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects nonexistent and ambiguous wall clocks",
+          "status": "passed",
+          "title": "rejects nonexistent and ambiguous wall clocks",
+          "duration": 6.764005999999995,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "retains recurrence and floating times without UTC conversion",
+          "status": "passed",
+          "title": "retains recurrence and floating times without UTC conversion",
+          "duration": 2.5468869999999697,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "reschedules fixed time at same local hour across DST",
+          "status": "passed",
+          "title": "reschedules fixed time at same local hour across DST",
+          "duration": 4.21355200000005,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "groups fixed dates in London but preserves floating dates",
+          "status": "passed",
+          "title": "groups fixed dates in London but preserves floating dates",
+          "duration": 2.7764629999999215,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "template substitution creates copies and executes no code",
+          "status": "passed",
+          "title": "template substitution creates copies and executes no code",
+          "duration": 1.1183220000000347,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        }
+      ],
+      "startTime": 1791549572610,
+      "endTime": 1791549572681.1184,
+      "status": "passed",
+      "message": "",
+      "name": "/home/oliver/Flowstitch/tests/unit/dates.test.ts"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [],
+          "fullName": "ignores frontmatter, fenced tasks and foreign integrations",
+          "status": "passed",
+          "title": "ignores frontmatter, fenced tasks and foreign integrations",
+          "duration": 6.402651999999989,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "preserves indentation, CRLF, links, tags and Tasks/Dataview suffixes",
+          "status": "passed",
+          "title": "preserves indentation, CRLF, links, tags and Tasks/Dataview suffixes",
+          "duration": 7.254577999999981,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "rejects stale writes, duplicate identities and multiline titles",
+          "status": "passed",
+          "title": "rejects stale writes, duplicate identities and multiline titles",
+          "duration": 3.236513000000002,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "inserts daily view without rewriting user content and is idempotent",
+          "status": "passed",
+          "title": "inserts daily view without rewriting user content and is idempotent",
+          "duration": 1.1736139999999864,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "URI encodes vault, note and heading without filesystem paths",
+          "status": "passed",
+          "title": "URI encodes vault, note and heading without filesystem paths",
+          "duration": 0.6263779999999883,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "initial preset creates no remote routines or templates",
+          "status": "passed",
+          "title": "initial preset creates no remote routines or templates",
+          "duration": 0.54436800000002,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "merges fields independently and flags concurrent title changes",
+          "status": "passed",
+          "title": "merges fields independently and flags concurrent title changes",
+          "duration": 1.8412610000000313,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "completion preserves original whitespace and marker position",
+          "status": "passed",
+          "title": "completion preserves original whitespace and marker position",
+          "duration": 0.6490940000000478,
+          "failureMessages": [],
+          "meta": {},
+          "tags": [],
+          "benchmarks": []
+        }
+      ],
+      "startTime": 1791549573040,
+      "endTime": 1791549573062.6492,
+      "status": "passed",
+      "message": "",
+      "name": "/home/oliver/Flowstitch/tests/unit/markdown.test.ts"
+    }
+  ]
+}
