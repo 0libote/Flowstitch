@@ -10,4 +10,4 @@
 - Device-local writing activation, SecretStorage, diagnostics and compatibility boundaries.
 - Automated tests, production package and source-grounded research.
 
-Not publicly published. Live account and real Obsidian desktop/mobile acceptance checks remain release gates.
+First GitHub release. Not submitted to the community plugin registry. Live account and real Obsidian desktop/mobile acceptance checks remain release gates.
