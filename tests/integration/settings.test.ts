@@ -44,7 +44,7 @@ it("exposes searchable settings without side effects and shares every row with t
   const names = definitions().map((item) => ("name" in item ? item.name : ""));
   expect(names).toEqual(
     expect.arrayContaining([
-      "Todoist token",
+      "Connect Todoist",
       "Opt-in marker",
       "Timezone",
       "Default project",

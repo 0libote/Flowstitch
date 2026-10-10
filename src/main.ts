@@ -2,7 +2,6 @@ import {
   Plugin,
   PluginSettingTab,
   Setting,
-  SecretComponent,
   Notice,
   MarkdownView,
   TFile,
@@ -813,22 +812,6 @@ export class FlowstitchSettings extends PluginSettingTab {
       });
     };
     const settings = this.plugin.state.settings;
-    define(
-      "Todoist token",
-      "Select a local Obsidian secret. Credentials never enter plugin data.",
-      (row) => {
-        row.addComponent((parent) =>
-          new SecretComponent(this.app, parent)
-            .setValue(settings.secretName)
-            .onChange(
-              this.handleChange(async (value) => {
-                settings.secretName = value ?? "flowstitch-todoist";
-                await this.plugin.save();
-              }),
-            ),
-        );
-      },
-    );
     define("Connect Todoist", "", (row) => {
       row.addButton((b) =>
         b
