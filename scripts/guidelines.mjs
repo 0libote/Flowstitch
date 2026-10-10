@@ -27,6 +27,10 @@ for (const file of await sources("src")) {
     ),
     `Unsafe runtime pattern in ${file}`,
   );
+  assert.ok(
+    !/\bdocument\.createElement\s*\(/.test(source),
+    `Use Obsidian createEl helpers in ${file}`,
+  );
   assert.ok(!/sync\/v9|rest\/v2/.test(source), `Obsolete API in ${file}`);
 }
 const bundle = await readFile("main.js", "utf8");

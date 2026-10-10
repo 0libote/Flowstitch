@@ -13,6 +13,8 @@ import {
   moment,
   type Editor,
   type App,
+  type SettingDefinitionGroup,
+  type SettingDefinitionRender,
 } from "obsidian";
 import { TodoistClient } from "./api/client";
 import { SyncEngine } from "./sync/engine";
@@ -453,7 +455,7 @@ export default class Flowstitch extends Plugin {
   contextProject(path: string): string {
     if (!this.state.settings.smartDefaults || !path) return "";
     const file = this.app.vault.getFileByPath(path);
-    const configured = file
+    const configured: unknown = file
       ? this.app.metadataCache?.getFileCache(file)?.frontmatter?.[
           "flowstitch-project"
         ]
@@ -490,9 +492,12 @@ export default class Flowstitch extends Plugin {
     });
     button(modal.contentEl, "Link current note", async () => {
       if (!project) throw new Error("Choose a project");
-      await this.app.fileManager.processFrontMatter(file, (data) => {
-        data["flowstitch-project"] = project;
-      });
+      await this.app.fileManager.processFrontMatter(
+        file,
+        (data: Record<string, unknown>) => {
+          data["flowstitch-project"] = project;
+        },
+      );
       modal.close();
     });
     modal.open();
@@ -772,86 +777,107 @@ export default class Flowstitch extends Plugin {
     modal.open();
   }
 }
-class FlowstitchSettings extends PluginSettingTab {
+type FlowstitchSettingDefinition = Omit<SettingDefinitionRender, "render"> & {
+  render: (setting: Setting) => void;
+};
+type FlowstitchSettingGroup = Omit<SettingDefinitionGroup, "items"> & {
+  items: FlowstitchSettingDefinition[];
+};
+export class FlowstitchSettings extends PluginSettingTab {
   constructor(
     app: App,
     private plugin: Flowstitch,
   ) {
     super(app, plugin);
   }
-  display(): void {
-    const el = this.containerEl;
-    el.empty();
+  getSettingDefinitions(): FlowstitchSettingGroup[] {
+    const groups: FlowstitchSettingGroup[] = [{ type: "group", items: [] }];
+    let items: FlowstitchSettingDefinition[] = [];
+    groups[0]!.items = items;
+    const define = (
+      name: string,
+      desc: string,
+      render: (setting: Setting) => void,
+    ): void => {
+      items.push({
+        name,
+        desc,
+        render: (setting) => {
+          render(setting);
+        },
+      });
+    };
     const settings = this.plugin.state.settings;
-    new Setting(el)
-      .setName("Todoist token")
-      .setDesc(
-        "Select a local Obsidian secret. Credentials never enter plugin data.",
-      )
-      .addComponent((parent) =>
-        new SecretComponent(this.app, parent)
-          .setValue(settings.secretName)
-          .onChange(async (value) => {
-            settings.secretName = value ?? "flowstitch-todoist";
-            await this.plugin.save();
-          }),
-      );
-    new Setting(el)
-      .setName("Connect Todoist")
-      .addButton((b) =>
+    define(
+      "Todoist token",
+      "Select a local Obsidian secret. Credentials never enter plugin data.",
+      (row) =>
+        row.addComponent((parent) =>
+          new SecretComponent(this.app, parent)
+            .setValue(settings.secretName)
+            .onChange(async (value) => {
+              settings.secretName = value ?? "flowstitch-todoist";
+              await this.plugin.save();
+            }),
+        ),
+    );
+    define("Connect Todoist", "", (row) =>
+      row.addButton((b) =>
         b
           .setButtonText("Connection wizard")
           .onClick(() => this.plugin.connect()),
-      );
-    new Setting(el)
-      .setName("Enable writing on this device")
-      .setDesc(
-        "Choose one writer for Markdown sync. Other devices stay read-only. No ordinary checkboxes are opted in automatically.",
-      )
-      .addToggle((t) =>
-        t.setValue(this.plugin.canWrite()).onChange((v) => {
-          this.plugin.setWriter(v);
-          this.display();
-        }),
-      );
-    new Setting(el)
-      .setName("Scoped coexistence")
-      .setDesc(
-        "Explicitly allow writing with another integration installed. Foreign Todoist markers are excluded. Keep their folder scopes disjoint.",
-      )
-      .addToggle((t) =>
-        t.setValue(settings.scopedSync).onChange(async (v) => {
-          settings.scopedSync = v;
+      ),
+    );
+    define(
+      "Enable writing on this device",
+      "Choose one writer for Markdown sync. Other devices stay read-only. No ordinary checkboxes are opted in automatically.",
+      (row) =>
+        row.addToggle((t) =>
+          t.setValue(this.plugin.canWrite()).onChange((v) => {
+            this.plugin.setWriter(v);
+            this.refreshSettings();
+          }),
+        ),
+    );
+    define(
+      "Scoped coexistence",
+      "Explicitly allow writing with another integration installed. Foreign Todoist markers are excluded. Keep their folder scopes disjoint.",
+      (row) =>
+        row.addToggle((t) =>
+          t.setValue(settings.scopedSync).onChange(async (v) => {
+            settings.scopedSync = v;
+            await this.plugin.save();
+            this.plugin.engine.emit();
+            this.refreshSettings();
+          }),
+        ),
+    );
+    define(
+      "Contextual project defaults",
+      "Use the linked note project or its existing related tasks when capturing.",
+      (row) =>
+        row.addToggle((t) =>
+          t.setValue(settings.smartDefaults).onChange(async (value) => {
+            settings.smartDefaults = value;
+            await this.plugin.save();
+          }),
+        ),
+    );
+    items = [];
+    groups.push({ type: "group", heading: "Synchronisation", items });
+    define("Default project", "", (row) =>
+      row.addDropdown((d) => {
+        d.addOption("", "Todoist Inbox");
+        for (const p of Object.values(this.plugin.state.projects))
+          d.addOption(p.id, p.name);
+        d.setValue(settings.defaultProject).onChange(async (v) => {
+          settings.defaultProject = v;
           await this.plugin.save();
-          this.plugin.engine.emit();
-          this.display();
-        }),
-      );
-    new Setting(el)
-      .setName("Contextual project defaults")
-      .setDesc(
-        "Use the linked note project or its existing related tasks when capturing.",
-      )
-      .addToggle((t) =>
-        t.setValue(settings.smartDefaults).onChange(async (value) => {
-          settings.smartDefaults = value;
-          await this.plugin.save();
-        }),
-      );
-    new Setting(el).setName("Synchronisation").setHeading();
-    new Setting(el).setName("Default project").addDropdown((d) => {
-      d.addOption("", "Todoist Inbox");
-      for (const p of Object.values(this.plugin.state.projects))
-        d.addOption(p.id, p.name);
-      d.setValue(settings.defaultProject).onChange(async (v) => {
-        settings.defaultProject = v;
-        await this.plugin.save();
-      });
-    });
-    new Setting(el)
-      .setName("Refresh interval")
-      .setDesc("Seconds, minimum 30.")
-      .addText((t) =>
+        });
+      }),
+    );
+    define("Refresh interval", "Seconds, minimum 30.", (row) =>
+      row.addText((t) =>
         t.setValue(String(settings.interval)).onChange(async (v) => {
           const n = Number(v);
           if (Number.isFinite(n) && n >= 30) {
@@ -860,7 +886,8 @@ class FlowstitchSettings extends PluginSettingTab {
             this.plugin.restartTimer();
           }
         }),
-      );
+      ),
+    );
     for (const [key, name, desc] of [
       [
         "marker",
@@ -874,10 +901,8 @@ class FlowstitchSettings extends PluginSettingTab {
       ],
       ["timezone", "Timezone", "IANA timezone, such as Europe/London."],
     ] as const)
-      new Setting(el)
-        .setName(name)
-        .setDesc(desc)
-        .addText((t) =>
+      define(name, desc, (row) =>
+        row.addText((t) =>
           t.setValue(settings[key]).onChange(async (v) => {
             if (key === "timezone") {
               try {
@@ -891,23 +916,25 @@ class FlowstitchSettings extends PluginSettingTab {
             await this.plugin.save();
             if (key === "marker") await this.plugin.reindex();
           }),
-        );
-    new Setting(el)
-      .setName("Opt-in folders")
-      .setDesc(
-        "One vault-relative folder per line. Every checkbox there is explicitly opted in; leave blank for marker-only sync.",
-      )
-      .addTextArea((t) =>
-        t.setValue(settings.folders.join("\n")).onChange(async (v) => {
-          settings.folders = v
-            .split("\n")
-            .map((s) => s.trim())
-            .filter(Boolean);
-          await this.plugin.save();
-          await this.plugin.reindex();
-        }),
+        ),
       );
-    new Setting(el).setName("Daily planning").setHeading();
+    define(
+      "Opt-in folders",
+      "One vault-relative folder per line. Every checkbox there is explicitly opted in; leave blank for marker-only sync.",
+      (row) =>
+        row.addTextArea((t) =>
+          t.setValue(settings.folders.join("\n")).onChange(async (v) => {
+            settings.folders = v
+              .split("\n")
+              .map((s) => s.trim())
+              .filter(Boolean);
+            await this.plugin.save();
+            await this.plugin.reindex();
+          }),
+        ),
+    );
+    items = [];
+    groups.push({ type: "group", heading: "Daily planning", items });
     for (const [key, name] of [
       ["dailyHeading", "Live view heading"],
       ["dailyFolder", "Daily Note folder"],
@@ -917,38 +944,62 @@ class FlowstitchSettings extends PluginSettingTab {
       ["lunchStart", "Lunch starts"],
       ["lunchEnd", "Lunch finishes"],
     ] as const)
-      new Setting(el).setName(name).addText((t) =>
-        t.setValue(settings[key]).onChange(async (v) => {
-          settings[key] = v;
-          await this.plugin.save();
-        }),
+      define(name, "", (row) =>
+        row.addText((t) =>
+          t.setValue(settings[key]).onChange(async (v) => {
+            settings[key] = v;
+            await this.plugin.save();
+          }),
+        ),
       );
-    new Setting(el)
-      .setName("Holiday assistant")
-      .setDesc(
-        "Optional government calendar request during review. Suggestions only; no automatic routine rescheduling.",
-      )
-      .addToggle((t) =>
-        t.setValue(settings.holidays).onChange(async (v) => {
-          settings.holidays = v;
-          await this.plugin.save();
-        }),
-      );
-    new Setting(el)
-      .setName("Export configuration")
-      .setDesc(
-        "Includes presets and preferences; excludes credentials, cache and note contents.",
-      )
-      .addButton((b) =>
-        b
-          .setButtonText("Export")
-          .onClick(() =>
-            new TextModal(
-              this.app,
-              "Flowstitch configuration",
-              JSON.stringify(settings, null, 2),
-            ).open(),
-          ),
-      );
+    define(
+      "Holiday assistant",
+      "Optional government calendar request during review. Suggestions only; no automatic routine rescheduling.",
+      (row) =>
+        row.addToggle((t) =>
+          t.setValue(settings.holidays).onChange(async (v) => {
+            settings.holidays = v;
+            await this.plugin.save();
+          }),
+        ),
+    );
+    define(
+      "Export configuration",
+      "Includes presets and preferences; excludes credentials, cache and note contents.",
+      (row) =>
+        row.addButton((b) =>
+          b
+            .setButtonText("Export")
+            .onClick(() =>
+              new TextModal(
+                this.app,
+                "Flowstitch configuration",
+                JSON.stringify(settings, null, 2),
+              ).open(),
+            ),
+        ),
+    );
+    return groups;
+  }
+  // Obsidian before 1.13 uses this fallback; both paths share definitions.
+  display(): void {
+    this.renderLegacy();
+  }
+  private refreshSettings(): void {
+    if (typeof this.update === "function") this.update();
+    else this.renderLegacy();
+  }
+  private renderLegacy(): void {
+    this.containerEl.empty();
+    for (const group of this.getSettingDefinitions()) {
+      if (group.heading)
+        new Setting(this.containerEl).setName(group.heading).setHeading();
+      for (const item of group.items) {
+        const row = new Setting(this.containerEl)
+          .setName(item.name)
+          .setDesc(item.desc ?? "");
+        item.render(row);
+      }
+    }
   }
 }

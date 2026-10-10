@@ -36,6 +36,9 @@ export class ApiError extends Error {
     );
   }
 }
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error("Unexpected Todoist response");
@@ -166,7 +169,7 @@ export class TodoistClient {
       });
       const r = record(await this.request(`${path}?${query}`));
       const entries = r.results ?? r.items;
-      if (!Array.isArray(entries)) throw new Error("Unexpected Todoist page");
+      if (!isUnknownArray(entries)) throw new Error("Unexpected Todoist page");
       results.push(...entries);
       cursor = typeof r.next_cursor === "string" ? r.next_cursor : null;
       if (cursor && seen.has(cursor))

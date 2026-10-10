@@ -9,5 +9,6 @@
 - Daily live views, completion snapshot preview and end-of-day selection.
 - Device-local writing activation, SecretStorage, diagnostics and compatibility boundaries.
 - Automated tests, production package and source-grounded research.
+- Searchable settings on Obsidian 1.13+, shared controls for older hosts, and stricter type-aware lint checks at API/frontmatter boundaries.
 
 First GitHub release. Not submitted to the community plugin registry. Live account and real Obsidian desktop/mobile acceptance checks remain release gates.

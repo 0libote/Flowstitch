@@ -63,7 +63,7 @@ export function template(text: string, values: Record<string, string>): string {
 }
 export function safeNoteName(title: string): string {
   const name = title
-    .replace(/[\\/:*?"<>|#\[\]\r\n]/g, " ")
+    .replace(/[\\/:*?"<>|#[\]\r\n]/g, " ")
     .trim()
     .slice(0, 120);
   if (!name || name === "." || name === "..")

@@ -1,17 +1,23 @@
 # Actual test report
 
-Local automated verification on 2026-10-09, Linux x64, Node 24.21.0, TypeScript 5.9.3, Vitest 5.0.3, esbuild 0.28.2, ESLint 10.12.0, jsdom 30.1.2. No Obsidian executable or dedicated Todoist test credentials were available. No tasks were created, completed or deleted in a real Todoist account. No actual Mac/iPhone/iPad/Android device testing is claimed.
+Local automated verification on 2026-10-10, Linux x64, Node 24.21.0, TypeScript 5.9.3, Vitest 5.0.3, esbuild 0.28.2, ESLint 10.12.0, jsdom 30.1.2. No Obsidian executable or dedicated Todoist test credentials were available. No tasks were created, completed or deleted in a real Todoist account. No actual Mac/iPhone/iPad/Android device testing is claimed.
 
 ## Results
 
 - Strict type checking: passed.
-- ESLint: passed.
-- Unit and mocked integration/DOM/lifecycle tests: **50 passed, 0 failed**, six files.
-- Production build: passed, browser-target CommonJS bundle, approximately 58 KiB; only Obsidian is external.
+- ESLint: passed, including type-aware unsafe argument, assignment and member access checks in production source.
+- Unit and mocked integration/DOM/lifecycle tests: **55 passed, 0 failed**, seven files.
+- Production build: passed, browser-target CommonJS bundle; only Obsidian is external.
 - Dependency security audit: **0 vulnerabilities**. The initially selected Vitest 3 dependencies had advisories; replaced with Vitest 5 and compatible current esbuild. See dependency-audit.json.
 - Automated guideline smoke checks: passed (manifest/version consistency, description, licence, no unsafe HTML/eval/logging/desktop imports/obsolete API URLs, required build assets). This is not an official community-plugin review.
 - Desktop light (728 px) and phone dark (360 px) HTML previews: manually inspected for visual layout using production Dashboard DOM with fixture tasks and theme-variable harness. No console exceptions or horizontal page overflow. These are browser simulations, not Obsidian app screenshots.
 - Machine-readable test results are in test-results.json. Each named assertion identifies its scope. Build/package files and checksums are in dist.
+
+## Settings review follow-up
+
+Searchable declarative definitions and the pre-1.13 settings fallback share the same controls. Added automated coverage for side-effect-free definition discovery, matching legacy rows, writer control refresh on both host paths, marker validation/index refresh, project selection, untrusted frontmatter values and filename bracket sanitisation. Guideline smoke checks now reject `document.createElement` in production source. No such calls were present in the source reviewed for this follow-up.
+
+The legacy `display()` override is retained for the supported Obsidian 1.11.4–1.12 versions; controls no longer call it. On 1.13 and later, Obsidian uses `getSettingDefinitions()` and controls refresh through `update()`. This follows the official [declarative settings migration guide](https://docs.obsidian.md/plugins/guides/migrate-declarative-settings). Actual settings-search behaviour still needs verification in the Obsidian application.
 
 ## Acceptance coverage
 
