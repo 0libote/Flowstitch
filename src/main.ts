@@ -812,13 +812,17 @@ export class FlowstitchSettings extends PluginSettingTab {
       });
     };
     const settings = this.plugin.state.settings;
-    define("Connect Todoist", "", (row) => {
-      row.addButton((b) =>
-        b
-          .setButtonText("Connection wizard")
-          .onClick(() => this.plugin.connect()),
-      );
-    });
+    define(
+      "Connect Todoist",
+      "Guided setup: get your token from Todoist and test the connection.",
+      (row) => {
+        row.addButton((b) =>
+          b
+            .setButtonText("Connection wizard")
+            .onClick(() => this.plugin.connect()),
+        );
+      },
+    );
     define(
       "Enable writing on this device",
       "Choose one writer for Markdown sync. Other devices stay read-only. No ordinary checkboxes are opted in automatically.",

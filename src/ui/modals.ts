@@ -15,17 +15,35 @@ export class ConnectionModal extends Modal {
     super(plugin.app);
   }
   onOpen(): void {
-    this.setTitle("Connect your workspace");
+    const TOKEN_URL =
+      "https://app.todoist.com/app/settings/integrations/developer";
+    this.setTitle("Connect Todoist");
     this.contentEl.createEl("p", {
-      text: "Your notes and tasks, seamlessly connected.",
+      text: "Link Obsidian to Todoist in about a minute. Copy a token from Todoist, paste it below, and Flowstitch will verify it and load your projects.",
+    });
+    const steps = this.contentEl.createEl("ol");
+    steps.createEl("li", {
+      text: "In Todoist, open Settings → Integrations → Developer and copy your Personal API token.",
+    });
+    steps.createEl("li", {
+      text: "Paste the token below.",
+    });
+    steps.createEl("li", {
+      text: "Choose Connect. Flowstitch checks the token and discovers your projects.",
+    });
+    button(this.contentEl, "Open Todoist token page", () => {
+      window.open(TOKEN_URL);
     });
     this.contentEl.createEl("p", {
-      text: "Flowstitch connects directly to Todoist. Only opted-in task text and links are sent. Your token is stored in Obsidian Secret Storage on this device.",
+      text: "In the Todoist web app: avatar → Settings → Integrations → scroll to Developer → Copy next to Personal API token.",
+      cls: "flowstitch-muted",
     });
     let token = "";
     new Setting(this.contentEl)
       .setName("Personal API token")
-      .setDesc("Todoist → Settings → Integrations → Developer.")
+      .setDesc(
+        "Stored only in Secret Storage on this device. Never synced with your notes. Repeat on each device you use.",
+      )
       .addText((t) => {
         t.inputEl.type = "password";
         t.inputEl.autocomplete = "off";
@@ -33,11 +51,16 @@ export class ConnectionModal extends Modal {
           token = v.trim();
         });
       });
+    this.contentEl.createEl("p", {
+      text: "Only opted-in task text and links are sent to Todoist. If connecting fails, re-copy the full token without extra spaces.",
+      cls: "flowstitch-muted",
+    });
     button(
       this.contentEl,
       "Connect and discover projects",
       async () => {
-        if (!token) throw new Error("Enter a token");
+        if (!token)
+          throw new Error("Paste your token first (step 2 above)");
         this.plugin.app.secretStorage.setSecret(
           this.plugin.state.settings.secretName,
           token,
@@ -47,7 +70,9 @@ export class ConnectionModal extends Modal {
           this.plugin.engine.status === "Authentication required" ||
           this.plugin.engine.error
         )
-          throw new Error(this.plugin.engine.error);
+          throw new Error(
+            `${this.plugin.engine.error || "Todoist rejected the token"}. Re-copy the full token from the Developer tab and try again.`,
+          );
         const work = Object.values(this.plugin.state.projects).find(
           (p) => p.name === "Work",
         );
@@ -56,10 +81,10 @@ export class ConnectionModal extends Modal {
         await this.plugin.save();
         this.contentEl.empty();
         this.contentEl.createEl("p", {
-          text: "Connected. Your existing tasks and projects were discovered. No routines or master templates were created.",
+          text: "Connected. Your existing tasks and projects were loaded. Nothing else was created or changed in Todoist.",
         });
         this.contentEl.createEl("p", {
-          text: "Start with the dashboard. Enable writing on this device in Flowstitch settings when ready. Keep one device as the Markdown writer.",
+          text: "Next: open the dashboard to browse tasks. When ready, turn on writing on one device in Flowstitch settings to sync Markdown checkboxes.",
         });
         button(this.contentEl, "Open dashboard", async () => {
           this.close();
