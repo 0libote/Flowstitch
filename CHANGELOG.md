@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1 — settings hardening beta
+
+- Searchable settings on Obsidian 1.13+, shared controls for older hosts, and stricter type-aware lint checks at API/frontmatter boundaries.
+- Explicit API version guard for settings refresh, void render callbacks, sanitised save-failure notices and native span helpers.
+
+Draft GitHub release. Not submitted to the community plugin registry. Live account and real Obsidian desktop/mobile acceptance checks remain release gates.
+
 ## 0.1.0 — local beta
 
 - Native Todoist dashboard, capture, editing and task/note links.
@@ -9,7 +16,5 @@
 - Daily live views, completion snapshot preview and end-of-day selection.
 - Device-local writing activation, SecretStorage, diagnostics and compatibility boundaries.
 - Automated tests, production package and source-grounded research.
-- Searchable settings on Obsidian 1.13+, shared controls for older hosts, and stricter type-aware lint checks at API/frontmatter boundaries.
-- Explicit API version guard for settings refresh, void render callbacks, sanitised save-failure notices and native span helpers.
 
 First GitHub release. Not submitted to the community plugin registry. Live account and real Obsidian desktop/mobile acceptance checks remain release gates.
