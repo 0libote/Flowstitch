@@ -250,7 +250,7 @@ export function moment(date: string): { format: (pattern: string) => string } {
   };
 }
 
-export let apiVersion = "1.11.4";
+let apiVersion = "1.11.4";
 export function setApiVersion(version: string): void {
   apiVersion = version;
 }

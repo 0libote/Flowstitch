@@ -77,9 +77,9 @@ export class Dashboard {
       } else await this.plugin.engine.sync(true);
     });
     button(actions, "Diagnostics", () => this.diagnostics());
-    const status = this.el.createDiv({
+    const status = this.el.createEl("output", {
       cls: "flowstitch-status",
-      attr: { role: "status", "aria-live": "polite" },
+      attr: { "aria-live": "polite" },
     });
     status.createSpan({ text: this.plugin.engine.status });
     status.createSpan({
@@ -214,7 +214,6 @@ export class Dashboard {
       });
     const list = this.el.createDiv({
       cls: "flowstitch-list",
-      attr: { role: "list" },
     });
     if (!tasks.length) {
       list.createDiv({
@@ -227,6 +226,7 @@ export class Dashboard {
       return;
     }
     let group = "";
+    let groupList: HTMLElement | undefined;
     for (const task of tasks) {
       const heading =
         this.tab === "upcoming"
@@ -243,11 +243,12 @@ export class Dashboard {
                   dateKey(new Date(), this.plugin.state.settings.timezone)
               ? "Overdue"
               : "Tasks";
-      if (heading !== group) {
+      if (!groupList || heading !== group) {
         group = heading;
         list.createEl("h3", { text: heading, cls: "flowstitch-group" });
+        groupList = list.createEl("ul", { cls: "flowstitch-task-list" });
       }
-      this.row(list, task);
+      this.row(groupList, task);
     }
   }
   private selectTasks(): Task[] {
@@ -295,9 +296,8 @@ export class Dashboard {
       );
   }
   private row(parent: HTMLElement, task: Task): void {
-    const row = parent.createDiv({
+    const row = parent.createEl("li", {
       cls: `flowstitch-row priority-${task.priority}`,
-      attr: { role: "listitem" },
     });
     const check = row.createEl("input", {
       attr: {

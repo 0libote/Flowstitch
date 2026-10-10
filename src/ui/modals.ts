@@ -32,7 +32,7 @@ export class ConnectionModal extends Modal {
       text: "Choose Connect. Flowstitch checks the token and discovers your projects.",
     });
     button(this.contentEl, "Open Todoist token page", () => {
-      window.open(TOKEN_URL);
+      window.open(TOKEN_URL, "_blank", "noopener,noreferrer");
     });
     this.contentEl.createEl("p", {
       text: "In the Todoist web app: avatar → Settings → Integrations → scroll to Developer → Copy next to Personal API token.",
@@ -59,8 +59,7 @@ export class ConnectionModal extends Modal {
       this.contentEl,
       "Connect and discover projects",
       async () => {
-        if (!token)
-          throw new Error("Paste your token first (step 2 above)");
+        if (!token) throw new Error("Paste your token first (step 2 above)");
         this.plugin.app.secretStorage.setSecret(
           this.plugin.state.settings.secretName,
           token,

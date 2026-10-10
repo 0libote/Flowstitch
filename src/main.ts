@@ -790,7 +790,7 @@ type FlowstitchSettingGroup = {
 export class FlowstitchSettings extends PluginSettingTab {
   constructor(
     app: App,
-    private plugin: Flowstitch,
+    private readonly plugin: Flowstitch,
   ) {
     super(app, plugin);
   }

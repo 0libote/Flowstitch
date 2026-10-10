@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { it, expect, vi, beforeEach } from "vitest";
 import { Dashboard } from "../../src/ui/dashboard";
-import { TaskModal } from "../../src/ui/modals";
+import { ConnectionModal, TaskModal } from "../../src/ui/modals";
 import { initialState, type Task } from "../../src/types";
 import type Flowstitch from "../../src/main";
 import { Modal } from "../obsidian-stub";
@@ -75,6 +75,11 @@ it("renders cached tasks offline and sends completion through the engine", async
   const ui = new Dashboard(h.plugin, el);
   expect(el.textContent).toContain("Review supplier prices");
   expect(el.textContent).toContain("Network unavailable");
+  expect(el.querySelector("output.flowstitch-status")?.textContent).toContain(
+    "Network unavailable",
+  );
+  expect(el.querySelectorAll("ul.flowstitch-task-list > li")).toHaveLength(1);
+  expect(el.querySelector("ul > h3")).toBeNull();
   const check = el.querySelector<HTMLInputElement>("input[type=checkbox]")!;
   check.checked = true;
   check.dispatchEvent(new Event("change"));
@@ -85,6 +90,25 @@ it("renders cached tasks offline and sends completion through the engine", async
   );
   ui.dispose();
   expect(h.listeners.size).toBe(0);
+});
+it("opens the Todoist token page without exposing the opener", async () => {
+  const h = plugin();
+  const open = vi.spyOn(window, "open").mockReturnValue(null);
+  try {
+    const modal = new ConnectionModal(h.plugin);
+    modal.open();
+    Array.from(modal.contentEl.querySelectorAll("button"))
+      .find((b) => b.textContent === "Open Todoist token page")!
+      .click();
+    await settle();
+    expect(open).toHaveBeenCalledWith(
+      "https://app.todoist.com/app/settings/integrations/developer",
+      "_blank",
+      "noopener,noreferrer",
+    );
+  } finally {
+    open.mockRestore();
+  }
 });
 it("renders malicious Todoist content as inert text", () => {
   const h = plugin();
@@ -194,7 +218,7 @@ it("writes a labelled desktop/mobile visual harness from production dashboard ma
   const { writeFile, mkdir, readFile } = await import("node:fs/promises");
   await mkdir("docs/screenshots", { recursive: true });
   const css = await readFile("styles.css", "utf8");
-  const page = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Flowstitch UI harness</title><style>:root{--text-normal:#25232b;--text-muted:#787380;--text-accent:#7660bd;--text-error:#b95252;--text-warning:#aa772d;--background-secondary:#f5f3f8;--background-modifier-border:#e5e0ea;--background-modifier-active-hover:#ede8f7;--interactive-accent:#7660bd;--font-ui-small:14px;--font-ui-smaller:12px;--font-ui-medium:16px;--font-ui-large:24px;--font-semibold:600;--radius-s:6px}body{font-family:system-ui;margin:0;background:#faf9fc;color:var(--text-normal)}button,input,select{font:inherit;border:1px solid var(--background-modifier-border);border-radius:6px;padding:6px 10px;background:#fff;color:inherit}button{cursor:pointer}@media(prefers-color-scheme:dark){:root{--text-normal:#e8e4ed;--text-muted:#a49dad;--text-accent:#b9a4ec;--background-secondary:#28252e;--background-modifier-border:#3a3542;--background-modifier-active-hover:#383043;--interactive-accent:#b9a4ec}body{background:#211e26}button,input,select{background:#28252e}}.mod-cta{background:#7660bd;color:white;border-color:transparent}.harness-label{font-size:12px;color:var(--text-muted);padding:12px 16px;background:var(--background-secondary)}${css}:root{--text-normal:var(--foreground,#25232b);--text-muted:var(--muted-foreground,#787380);--background-secondary:var(--secondary,#f5f3f8);--background-modifier-border:var(--border,#e5e0ea)}body{background:var(--background,#faf9fc)}button,input,select{background:var(--card,#fff)}.mod-cta{background:#7660bd}</style></head><body><p class="harness-label">UI harness • fixture data • actual Dashboard DOM • not an Obsidian or live Todoist test</p>${el.outerHTML}</body></html>`;
+  const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Flowstitch UI harness</title><style>:root{--text-normal:#25232b;--text-muted:#787380;--text-accent:#7660bd;--text-error:#b95252;--text-warning:#aa772d;--background-secondary:#f5f3f8;--background-modifier-border:#e5e0ea;--background-modifier-active-hover:#ede8f7;--interactive-accent:#7660bd;--font-ui-small:14px;--font-ui-smaller:12px;--font-ui-medium:16px;--font-ui-large:24px;--font-semibold:600;--radius-s:6px}body{font-family:system-ui;margin:0;background:#faf9fc;color:var(--text-normal)}button,input,select{font:inherit;border:1px solid var(--background-modifier-border);border-radius:6px;padding:6px 10px;background:#fff;color:inherit}button{cursor:pointer}@media(prefers-color-scheme:dark){:root{--text-normal:#e8e4ed;--text-muted:#a49dad;--text-accent:#b9a4ec;--background-secondary:#28252e;--background-modifier-border:#3a3542;--background-modifier-active-hover:#383043;--interactive-accent:#b9a4ec}body{background:#211e26}button,input,select{background:#28252e}}.mod-cta{background:#7660bd;color:white;border-color:transparent}.harness-label{font-size:12px;color:var(--text-muted);padding:12px 16px;background:var(--background-secondary)}${css}</style></head><body><p class="harness-label">UI harness • fixture data • actual Dashboard DOM • not an Obsidian or live Todoist test</p>${el.outerHTML}</body></html>`;
   await writeFile("docs/ui-preview.html", page);
   expect(page).toContain("actual Dashboard DOM");
 });

@@ -85,6 +85,11 @@
   font-weight: var(--font-semibold);
   margin: 20px 0 8px;
 }
+.flowstitch-task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
 .flowstitch-row {
   display: flex;
   align-items: center;
