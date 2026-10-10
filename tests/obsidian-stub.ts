@@ -249,3 +249,17 @@ export function moment(date: string): { format: (pattern: string) => string } {
         .replace("DD", date.slice(8, 10)),
   };
 }
+
+export let apiVersion = "1.11.4";
+export function setApiVersion(version: string): void {
+  apiVersion = version;
+}
+export function requireApiVersion(version: string): boolean {
+  const current = apiVersion.split(".").map(Number);
+  const required = version.split(".").map(Number);
+  for (let index = 0; index < 3; index++) {
+    if (current[index] !== required[index])
+      return current[index]! > required[index]!;
+  }
+  return true;
+}

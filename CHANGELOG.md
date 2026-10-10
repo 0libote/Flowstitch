@@ -10,5 +10,6 @@
 - Device-local writing activation, SecretStorage, diagnostics and compatibility boundaries.
 - Automated tests, production package and source-grounded research.
 - Searchable settings on Obsidian 1.13+, shared controls for older hosts, and stricter type-aware lint checks at API/frontmatter boundaries.
+- Explicit API version guard for settings refresh, void render callbacks, sanitised save-failure notices and native span helpers.
 
 First GitHub release. Not submitted to the community plugin registry. Live account and real Obsidian desktop/mobile acceptance checks remain release gates.

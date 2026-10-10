@@ -9,12 +9,11 @@ import {
   Modal,
   addIcon,
   requestUrl,
+  requireApiVersion,
   normalizePath,
   moment,
   type Editor,
   type App,
-  type SettingDefinitionGroup,
-  type SettingDefinitionRender,
 } from "obsidian";
 import { TodoistClient } from "./api/client";
 import { SyncEngine } from "./sync/engine";
@@ -646,7 +645,7 @@ export default class Flowstitch extends Plugin {
           await this.engine.resolve(conflict.id, "remote");
           render();
         }).disabled = !this.canWrite();
-        row.createEl("span", { text: "Close this screen to defer." });
+        row.createSpan({ text: "Close this screen to defer." });
       }
       button(modal.contentEl, "Copy sanitised report", async () => {
         await navigator.clipboard.writeText(
@@ -777,10 +776,16 @@ export default class Flowstitch extends Plugin {
     modal.open();
   }
 }
-type FlowstitchSettingDefinition = Omit<SettingDefinitionRender, "render"> & {
+// These records belong to Flowstitch and are also consumed by the legacy renderer.
+// Their shape is checked against the modern API through the method override.
+type FlowstitchSettingDefinition = {
+  name: string;
+  desc: string;
   render: (setting: Setting) => void;
 };
-type FlowstitchSettingGroup = Omit<SettingDefinitionGroup, "items"> & {
+type FlowstitchSettingGroup = {
+  type: "group";
+  heading?: string;
   items: FlowstitchSettingDefinition[];
 };
 export class FlowstitchSettings extends PluginSettingTab {
@@ -811,83 +816,97 @@ export class FlowstitchSettings extends PluginSettingTab {
     define(
       "Todoist token",
       "Select a local Obsidian secret. Credentials never enter plugin data.",
-      (row) =>
+      (row) => {
         row.addComponent((parent) =>
           new SecretComponent(this.app, parent)
             .setValue(settings.secretName)
-            .onChange(async (value) => {
-              settings.secretName = value ?? "flowstitch-todoist";
-              await this.plugin.save();
-            }),
-        ),
+            .onChange(
+              this.handleChange(async (value) => {
+                settings.secretName = value ?? "flowstitch-todoist";
+                await this.plugin.save();
+              }),
+            ),
+        );
+      },
     );
-    define("Connect Todoist", "", (row) =>
+    define("Connect Todoist", "", (row) => {
       row.addButton((b) =>
         b
           .setButtonText("Connection wizard")
           .onClick(() => this.plugin.connect()),
-      ),
-    );
+      );
+    });
     define(
       "Enable writing on this device",
       "Choose one writer for Markdown sync. Other devices stay read-only. No ordinary checkboxes are opted in automatically.",
-      (row) =>
+      (row) => {
         row.addToggle((t) =>
           t.setValue(this.plugin.canWrite()).onChange((v) => {
             this.plugin.setWriter(v);
             this.refreshSettings();
           }),
-        ),
+        );
+      },
     );
     define(
       "Scoped coexistence",
       "Explicitly allow writing with another integration installed. Foreign Todoist markers are excluded. Keep their folder scopes disjoint.",
-      (row) =>
+      (row) => {
         row.addToggle((t) =>
-          t.setValue(settings.scopedSync).onChange(async (v) => {
-            settings.scopedSync = v;
-            await this.plugin.save();
-            this.plugin.engine.emit();
-            this.refreshSettings();
-          }),
-        ),
+          t.setValue(settings.scopedSync).onChange(
+            this.handleChange(async (v) => {
+              settings.scopedSync = v;
+              await this.plugin.save();
+              this.plugin.engine.emit();
+              this.refreshSettings();
+            }),
+          ),
+        );
+      },
     );
     define(
       "Contextual project defaults",
       "Use the linked note project or its existing related tasks when capturing.",
-      (row) =>
+      (row) => {
         row.addToggle((t) =>
-          t.setValue(settings.smartDefaults).onChange(async (value) => {
-            settings.smartDefaults = value;
-            await this.plugin.save();
-          }),
-        ),
+          t.setValue(settings.smartDefaults).onChange(
+            this.handleChange(async (value) => {
+              settings.smartDefaults = value;
+              await this.plugin.save();
+            }),
+          ),
+        );
+      },
     );
     items = [];
     groups.push({ type: "group", heading: "Synchronisation", items });
-    define("Default project", "", (row) =>
+    define("Default project", "", (row) => {
       row.addDropdown((d) => {
         d.addOption("", "Todoist Inbox");
         for (const p of Object.values(this.plugin.state.projects))
           d.addOption(p.id, p.name);
-        d.setValue(settings.defaultProject).onChange(async (v) => {
-          settings.defaultProject = v;
-          await this.plugin.save();
-        });
-      }),
-    );
-    define("Refresh interval", "Seconds, minimum 30.", (row) =>
-      row.addText((t) =>
-        t.setValue(String(settings.interval)).onChange(async (v) => {
-          const n = Number(v);
-          if (Number.isFinite(n) && n >= 30) {
-            settings.interval = n;
+        d.setValue(settings.defaultProject).onChange(
+          this.handleChange(async (v) => {
+            settings.defaultProject = v;
             await this.plugin.save();
-            this.plugin.restartTimer();
-          }
-        }),
-      ),
-    );
+          }),
+        );
+      });
+    });
+    define("Refresh interval", "Seconds, minimum 30.", (row) => {
+      row.addText((t) =>
+        t.setValue(String(settings.interval)).onChange(
+          this.handleChange(async (v) => {
+            const n = Number(v);
+            if (Number.isFinite(n) && n >= 30) {
+              settings.interval = n;
+              await this.plugin.save();
+              this.plugin.restartTimer();
+            }
+          }),
+        ),
+      );
+    });
     for (const [key, name, desc] of [
       [
         "marker",
@@ -901,37 +920,42 @@ export class FlowstitchSettings extends PluginSettingTab {
       ],
       ["timezone", "Timezone", "IANA timezone, such as Europe/London."],
     ] as const)
-      define(name, desc, (row) =>
+      define(name, desc, (row) => {
         row.addText((t) =>
-          t.setValue(settings[key]).onChange(async (v) => {
-            if (key === "timezone") {
-              try {
-                new Intl.DateTimeFormat("en", { timeZone: v });
-              } catch {
-                return;
+          t.setValue(settings[key]).onChange(
+            this.handleChange(async (v) => {
+              if (key === "timezone") {
+                try {
+                  new Intl.DateTimeFormat("en", { timeZone: v });
+                } catch {
+                  return;
+                }
               }
-            }
-            if (key === "marker" && !/^#[\w/-]+$/.test(v)) return;
-            settings[key] = v;
-            await this.plugin.save();
-            if (key === "marker") await this.plugin.reindex();
-          }),
-        ),
-      );
+              if (key === "marker" && !/^#[\w/-]+$/.test(v)) return;
+              settings[key] = v;
+              await this.plugin.save();
+              if (key === "marker") await this.plugin.reindex();
+            }),
+          ),
+        );
+      });
     define(
       "Opt-in folders",
       "One vault-relative folder per line. Every checkbox there is explicitly opted in; leave blank for marker-only sync.",
-      (row) =>
+      (row) => {
         row.addTextArea((t) =>
-          t.setValue(settings.folders.join("\n")).onChange(async (v) => {
-            settings.folders = v
-              .split("\n")
-              .map((s) => s.trim())
-              .filter(Boolean);
-            await this.plugin.save();
-            await this.plugin.reindex();
-          }),
-        ),
+          t.setValue(settings.folders.join("\n")).onChange(
+            this.handleChange(async (v) => {
+              settings.folders = v
+                .split("\n")
+                .map((s) => s.trim())
+                .filter(Boolean);
+              await this.plugin.save();
+              await this.plugin.reindex();
+            }),
+          ),
+        );
+      },
     );
     items = [];
     groups.push({ type: "group", heading: "Daily planning", items });
@@ -944,29 +968,34 @@ export class FlowstitchSettings extends PluginSettingTab {
       ["lunchStart", "Lunch starts"],
       ["lunchEnd", "Lunch finishes"],
     ] as const)
-      define(name, "", (row) =>
+      define(name, "", (row) => {
         row.addText((t) =>
-          t.setValue(settings[key]).onChange(async (v) => {
-            settings[key] = v;
-            await this.plugin.save();
-          }),
-        ),
-      );
+          t.setValue(settings[key]).onChange(
+            this.handleChange(async (v) => {
+              settings[key] = v;
+              await this.plugin.save();
+            }),
+          ),
+        );
+      });
     define(
       "Holiday assistant",
       "Optional government calendar request during review. Suggestions only; no automatic routine rescheduling.",
-      (row) =>
+      (row) => {
         row.addToggle((t) =>
-          t.setValue(settings.holidays).onChange(async (v) => {
-            settings.holidays = v;
-            await this.plugin.save();
-          }),
-        ),
+          t.setValue(settings.holidays).onChange(
+            this.handleChange(async (v) => {
+              settings.holidays = v;
+              await this.plugin.save();
+            }),
+          ),
+        );
+      },
     );
     define(
       "Export configuration",
       "Includes presets and preferences; excludes credentials, cache and note contents.",
-      (row) =>
+      (row) => {
         row.addButton((b) =>
           b
             .setButtonText("Export")
@@ -977,7 +1006,8 @@ export class FlowstitchSettings extends PluginSettingTab {
                 JSON.stringify(settings, null, 2),
               ).open(),
             ),
-        ),
+        );
+      },
     );
     return groups;
   }
@@ -985,8 +1015,19 @@ export class FlowstitchSettings extends PluginSettingTab {
   display(): void {
     this.renderLegacy();
   }
+  private handleChange<T>(
+    action: (value: T) => Promise<void>,
+  ): (value: T) => void {
+    return (value) => {
+      void action(value).catch(() => {
+        new Notice(
+          "Flowstitch could not save this setting. Check your vault storage and try again.",
+        );
+      });
+    };
+  }
   private refreshSettings(): void {
-    if (typeof this.update === "function") this.update();
+    if (requireApiVersion("1.13.0")) this.update();
     else this.renderLegacy();
   }
   private renderLegacy(): void {

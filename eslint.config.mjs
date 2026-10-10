@@ -6,6 +6,7 @@ export default tseslint.config(
     files: ["src/**/*.ts"],
     languageOptions: { parserOptions: { projectService: true } },
     rules: {
+      "@typescript-eslint/no-misused-promises": "error",
       "@typescript-eslint/no-unsafe-argument": "error",
       "@typescript-eslint/no-unsafe-assignment": "error",
       "@typescript-eslint/no-unsafe-member-access": "error",

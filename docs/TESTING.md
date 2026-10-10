@@ -5,8 +5,8 @@ Local automated verification on 2026-10-10, Linux x64, Node 24.21.0, TypeScript 
 ## Results
 
 - Strict type checking: passed.
-- ESLint: passed, including type-aware unsafe argument, assignment and member access checks in production source.
-- Unit and mocked integration/DOM/lifecycle tests: **55 passed, 0 failed**, seven files.
+- ESLint: passed, including type-aware misused promise, unsafe argument, assignment and member access checks in production source.
+- Unit and mocked integration/DOM/lifecycle tests: **56 passed, 0 failed**, seven files.
 - Production build: passed, browser-target CommonJS bundle; only Obsidian is external.
 - Dependency security audit: **0 vulnerabilities**. The initially selected Vitest 3 dependencies had advisories; replaced with Vitest 5 and compatible current esbuild. See dependency-audit.json.
 - Automated guideline smoke checks: passed (manifest/version consistency, description, licence, no unsafe HTML/eval/logging/desktop imports/obsolete API URLs, required build assets). This is not an official community-plugin review.
@@ -15,9 +15,11 @@ Local automated verification on 2026-10-10, Linux x64, Node 24.21.0, TypeScript 
 
 ## Settings review follow-up
 
-Searchable declarative definitions and the pre-1.13 settings fallback share the same controls. Added automated coverage for side-effect-free definition discovery, matching legacy rows, writer control refresh on both host paths, marker validation/index refresh, project selection, untrusted frontmatter values and filename bracket sanitisation. Guideline smoke checks now reject `document.createElement` in production source. No such calls were present in the source reviewed for this follow-up.
+Searchable declarative definitions and the pre-1.13 settings fallback share the same controls. Added automated coverage for side-effect-free definition discovery, matching legacy rows, writer control refresh on both host paths, marker validation/index refresh, project selection, untrusted frontmatter values and filename bracket sanitisation. Guideline smoke checks now reject `document.createElement` in production source. No such calls were present in the source reviewed for this follow-up. The official `prefer-create-el` rule also prefers `createSpan` over `createEl("span")`; the reported diagnostics row now uses that shorthand.
 
-The legacy `display()` override is retained for the supported Obsidian 1.11.4–1.12 versions; controls no longer call it. On 1.13 and later, Obsidian uses `getSettingDefinitions()` and controls refresh through `update()`. This follows the official [declarative settings migration guide](https://docs.obsidian.md/plugins/guides/migrate-declarative-settings). Actual settings-search behaviour still needs verification in the Obsidian application.
+A second targeted review ran the official `eslint-plugin-obsidianmd` 0.4.2 `no-unsupported-api` and `prefer-create-el` rules against all production source with the installed Obsidian 1.14.4 types: **zero findings**. These rules were loaded from the official npm package into a temporary review configuration, without adding runtime or development dependencies. The regular lint configuration now also enables `no-misused-promises`. Settings render callbacks explicitly return nothing, and asynchronous change callbacks report rejected saves without exposing error contents. Added a rejected-save test and explicit host-version simulation for settings refresh.
+
+The legacy `display()` override is retained for the supported Obsidian 1.11.4–1.12 versions; controls no longer call it. On 1.13 and later, Obsidian uses `getSettingDefinitions()` and controls refresh through `update()` inside a `requireApiVersion("1.13.0")` guard. This follows the official [declarative settings migration guide](https://docs.obsidian.md/plugins/guides/migrate-declarative-settings). Actual settings-search behaviour still needs verification in the Obsidian application.
 
 ## Acceptance coverage
 

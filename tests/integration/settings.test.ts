@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
-import { it, expect, vi } from "vitest";
+import { it, expect, vi, beforeEach } from "vitest";
 import { Setting, type App } from "obsidian";
 import Flowstitch, { FlowstitchSettings } from "../../src/main";
 import { initialState } from "../../src/types";
 import { safeNoteName } from "../../src/ui/helpers";
 import "../dom-setup";
+import { setApiVersion, notices } from "../obsidian-stub";
+beforeEach(() => setApiVersion("1.11.4"));
 
 function setup() {
   const state = initialState();
@@ -74,6 +76,7 @@ it("refreshes writing controls on legacy hosts and calls update on modern hosts"
     tab.containerEl.querySelector<HTMLInputElement>('input[type="checkbox"]')
       ?.checked,
   ).toBe(true);
+  setApiVersion("1.13.0");
   const update = vi.fn();
   Object.assign(tab, { update });
   const modernToggle = render("Enable writing on this device").querySelector(
@@ -128,4 +131,18 @@ it("removes both Markdown brackets and unsafe filename characters from note name
     "Article  draft    part two   three   tag",
   );
   expect(() => safeNoteName("[]")).toThrow("valid note title");
+});
+
+it("reports rejected asynchronous setting saves without leaking error contents", async () => {
+  const { fake, render } = setup();
+  fake.save.mockRejectedValueOnce(new Error("confidential vault information"));
+  const input = render("Live view heading").querySelector("input")!;
+  input.value = "My day";
+  input.dispatchEvent(new Event("input"));
+  await vi.waitFor(() =>
+    expect(notices[notices.length - 1]).toContain(
+      "could not save this setting",
+    ),
+  );
+  expect(notices[notices.length - 1]).not.toContain("confidential");
 });
