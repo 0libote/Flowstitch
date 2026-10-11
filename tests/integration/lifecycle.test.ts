@@ -71,6 +71,7 @@ it("scopes reindexing to linked notes, active note, and opted folders", async ()
 
   const createFile = (path: string, text: string) => {
     const f = new TFile(path);
+    f.extension = path.split(".").pop() ?? "";
     files.set(path, f);
     contents.set(path, text);
     return f;
@@ -80,8 +81,12 @@ it("scopes reindexing to linked notes, active note, and opted folders", async ()
     "linked.md",
     '- [ ] Task 1 <!-- flowstitch:{"key":"k1","id":"t1"} -->\n',
   );
-  const activeFile = createFile("active.md", "- [ ] Active task #todoist\n");
+  const activeFile = createFile("active.MD", "- [ ] Active task #todoist\n");
   const optedFile = createFile("work/sub/nested.md", "- [ ] Folder task\n");
+  const uppercaseFile = createFile(
+    "work/sub/uppercase.MD",
+    "- [ ] Uppercase task\n",
+  );
   createFile("other/ignored.md", "- [ ] Ignored task #todoist\n");
   const missingPath = "missing.md";
 
@@ -90,7 +95,7 @@ it("scopes reindexing to linked notes, active note, and opted folders", async ()
     children: [
       {
         path: "work/sub",
-        children: [optedFile],
+        children: [optedFile, uppercaseFile],
       },
     ],
   });
@@ -142,8 +147,9 @@ it("scopes reindexing to linked notes, active note, and opted folders", async ()
     (plugin as unknown as { index: Set<string> }).index,
   );
   expect(indexedPaths).toContain("linked.md");
-  expect(indexedPaths).toContain("active.md");
+  expect(indexedPaths).toContain("active.MD");
   expect(indexedPaths).toContain("work/sub/nested.md");
+  expect(indexedPaths).toContain("work/sub/uppercase.MD");
   expect(indexedPaths).not.toContain("other/ignored.md");
   expect(indexedPaths).not.toContain("missing.md");
   expect(indexedPaths).not.toContain("real-todoist-id-999");

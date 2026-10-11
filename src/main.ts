@@ -351,13 +351,13 @@ export default class Flowstitch extends Plugin {
     }
     for (const path of this.index) paths.add(path);
     const active = this.app.workspace?.getActiveFile?.();
-    if (active instanceof TFile && active.extension === "md")
+    if (active instanceof TFile && active.extension.toLowerCase() === "md")
       paths.add(active.path);
     for (const path of this.collectOptedFolderPaths()) paths.add(path);
     for (const path of paths) {
       if (!this.alive) return;
       const file = this.app.vault.getFileByPath(path);
-      if (file instanceof TFile && file.extension === "md")
+      if (file instanceof TFile && file.extension.toLowerCase() === "md")
         await this.indexFile(file);
       else this.index.delete(path);
     }
