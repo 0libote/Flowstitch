@@ -1,7 +1,7 @@
 {
   "id": "flowstitch",
   "name": "Flowstitch",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "minAppVersion": "1.11.4",
   "description": "Connect your notes and Todoist tasks with a live dashboard and opt-in synchronisation.",
   "author": "Flowstitch contributors",
