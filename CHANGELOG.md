@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2 — connection and dashboard UX
+
+- Guided Todoist connection: single Connect Todoist setting opens a step-by-step token wizard with setup steps, token-page link and clearer validation errors. The separate token secret row is removed; tokens stay in Secret Storage on each device.
+- Dashboard semantics: status renders as `output`, task groups as `ul`/`li`, Todoist links open with `noopener/noreferrer`, plus tighter settings typing and harness markup/tests.
+
+Draft GitHub release. Not submitted to the community plugin registry. Live account and real Obsidian desktop/mobile acceptance checks remain release gates.
+
 ## 0.1.1 — settings hardening beta
 
 - Searchable settings on Obsidian 1.13+, shared controls for older hosts, and stricter type-aware lint checks at API/frontmatter boundaries.
