@@ -221,7 +221,7 @@ export default class Flowstitch extends Plugin {
     );
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
-        if (file instanceof TFile && file.extension === "md")
+        if (file instanceof TFile && file.extension.toLowerCase() === "md")
           menu.addItem((i) =>
             i
               .setTitle("Create linked Todoist task")
@@ -234,14 +234,14 @@ export default class Flowstitch extends Plugin {
     );
     this.registerEvent(
       this.app.vault.on("modify", (file) => {
-        if (file instanceof TFile && file.extension === "md") {
+        if (file instanceof TFile && file.extension.toLowerCase() === "md") {
           void this.indexFile(file).then(() => this.scheduleSync());
         }
       }),
     );
     this.registerEvent(
       this.app.vault.on("create", (file) => {
-        if (file instanceof TFile && file.extension === "md")
+        if (file instanceof TFile && file.extension.toLowerCase() === "md")
           void this.indexFile(file).then(() => this.scheduleSync());
       }),
     );
@@ -346,18 +346,18 @@ export default class Flowstitch extends Plugin {
     // observed in this session, the active note, and files under the
     // explicitly configured opt-in folders. No vault-wide enumeration.
     const paths = new Set<string>();
-    for (const link of Object.values(this.state.links)) {
-      if (link.path && !link.path.startsWith("pending:")) paths.add(link.path);
+    for (const [id, link] of Object.entries(this.state.links)) {
+      if (!id.startsWith("pending:") && link.path) paths.add(link.path);
     }
     for (const path of this.index) paths.add(path);
     const active = this.app.workspace?.getActiveFile?.();
-    if (active instanceof TFile && active.extension === "md")
+    if (active instanceof TFile && active.extension.toLowerCase() === "md")
       paths.add(active.path);
     for (const path of this.collectOptedFolderPaths()) paths.add(path);
     for (const path of paths) {
       if (!this.alive) return;
       const file = this.app.vault.getFileByPath(path);
-      if (file instanceof TFile && file.extension === "md")
+      if (file instanceof TFile && file.extension.toLowerCase() === "md")
         await this.indexFile(file);
       else this.index.delete(path);
     }
@@ -387,7 +387,10 @@ export default class Flowstitch extends Plugin {
           );
           continue;
         }
-        if (typeof entry.path === "string" && entry.path.endsWith(".md"))
+        if (
+          typeof entry.path === "string" &&
+          entry.path.toLowerCase().endsWith(".md")
+        )
           out.push(entry.path);
       }
     }

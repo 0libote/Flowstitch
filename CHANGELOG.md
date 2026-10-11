@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Scoped startup and manual reindexing to linked notes, active note, and opted-in folder notes without full-vault enumeration.
+- Replaced clipboard sanitised report copy with view-only diagnostics modal.
+- Fixed pending link check in reindexing to avoid querying task IDs against the vault.
+- Added automated coverage for scoped reindexing, folder recursion, and pending link filtering.
+- Included Prettier formatting verification in `npm run check`.
+
 ## 0.1.2 — connection and dashboard UX
 
 - Guided Todoist connection: single Connect Todoist setting opens a step-by-step token wizard with setup steps, token-page link and clearer validation errors. The separate token secret row is removed; tokens stay in Secret Storage on each device.
