@@ -221,7 +221,7 @@ export default class Flowstitch extends Plugin {
     );
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
-        if (file instanceof TFile && file.extension === "md")
+        if (file instanceof TFile && file.extension.toLowerCase() === "md")
           menu.addItem((i) =>
             i
               .setTitle("Create linked Todoist task")
@@ -234,14 +234,14 @@ export default class Flowstitch extends Plugin {
     );
     this.registerEvent(
       this.app.vault.on("modify", (file) => {
-        if (file instanceof TFile && file.extension === "md") {
+        if (file instanceof TFile && file.extension.toLowerCase() === "md") {
           void this.indexFile(file).then(() => this.scheduleSync());
         }
       }),
     );
     this.registerEvent(
       this.app.vault.on("create", (file) => {
-        if (file instanceof TFile && file.extension === "md")
+        if (file instanceof TFile && file.extension.toLowerCase() === "md")
           void this.indexFile(file).then(() => this.scheduleSync());
       }),
     );
