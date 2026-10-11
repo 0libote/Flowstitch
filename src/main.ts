@@ -311,10 +311,9 @@ export default class Flowstitch extends Plugin {
   private async initialize(): Promise<void> {
     if (!this.alive) return;
     await this.detectCompeting();
-    for (const file of this.app.vault.getMarkdownFiles()) {
-      if (!this.alive) return;
-      await this.indexFile(file);
-    }
+    // Only re-validate explicitly opted-in notes (linked paths, active note,
+    // and user-configured folders). Never enumerate the whole vault.
+    await this.reindex();
     this.restartTimer();
     if (this.app.secretStorage.getSecret(this.state.settings.secretName))
       await this.engine.sync();
@@ -343,8 +342,56 @@ export default class Flowstitch extends Plugin {
     );
   }
   async reindex(): Promise<void> {
-    for (const file of this.app.vault.getMarkdownFiles())
-      await this.indexFile(file);
+    // Scoped re-validation only: previously linked notes, notes already
+    // observed in this session, the active note, and files under the
+    // explicitly configured opt-in folders. No vault-wide enumeration.
+    const paths = new Set<string>();
+    for (const link of Object.values(this.state.links)) {
+      if (link.path && !link.path.startsWith("pending:")) paths.add(link.path);
+    }
+    for (const path of this.index) paths.add(path);
+    const active = this.app.workspace?.getActiveFile?.();
+    if (active instanceof TFile && active.extension === "md")
+      paths.add(active.path);
+    for (const path of this.collectOptedFolderPaths()) paths.add(path);
+    for (const path of paths) {
+      if (!this.alive) return;
+      const file = this.app.vault.getFileByPath(path);
+      if (file instanceof TFile && file.extension === "md")
+        await this.indexFile(file);
+      else this.index.delete(path);
+    }
+  }
+  private collectOptedFolderPaths(): string[] {
+    const out: string[] = [];
+    const getAbstract = this.app.vault?.getAbstractFileByPath?.bind(
+      this.app.vault,
+    );
+    if (!getAbstract) return out;
+    for (const folder of this.state.settings.folders) {
+      const normalized = normalizePath(folder);
+      if (!normalized) continue;
+      const root = getAbstract(normalized) as unknown as {
+        children?: unknown;
+        path?: string;
+      } | null;
+      if (!root || !Array.isArray(root.children)) continue;
+      const stack: { path?: string; children?: unknown }[] = [
+        ...(root.children as { path?: string; children?: unknown }[]),
+      ];
+      while (stack.length) {
+        const entry = stack.pop()!;
+        if (Array.isArray(entry.children)) {
+          stack.push(
+            ...(entry.children as { path?: string; children?: unknown }[]),
+          );
+          continue;
+        }
+        if (typeof entry.path === "string" && entry.path.endsWith(".md"))
+          out.push(entry.path);
+      }
+    }
+    return out;
   }
   private async indexFile(file: TFile): Promise<void> {
     const text = await this.readNote(file.path);
@@ -646,8 +693,11 @@ export default class Flowstitch extends Plugin {
         }).disabled = !this.canWrite();
         row.createSpan({ text: "Close this screen to defer." });
       }
-      button(modal.contentEl, "Copy sanitised report", async () => {
-        await navigator.clipboard.writeText(
+      button(modal.contentEl, "View sanitised report", () => {
+        // Shown in a modal for manual copy; no programmatic copy buffer access.
+        new TextModal(
+          this.app,
+          "Sync diagnostics report",
           JSON.stringify(
             {
               version: this.manifest.version,
@@ -660,7 +710,7 @@ export default class Flowstitch extends Plugin {
             null,
             2,
           ),
-        );
+        ).open();
       });
     };
     render();
