@@ -9,7 +9,7 @@
     "lint": "eslint src tests",
     "test": "vitest run",
     "build": "npm run typecheck && node scripts/build.mjs",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build && npm run guidelines",
+    "check": "npm run format:check && npm run typecheck && npm run lint && npm test && npm run build && npm run guidelines",
     "package": "npm run build && python3 scripts/package.py",
     "format": "prettier --write src tests docs scripts/*.mjs *.json *.css *.mjs *.ts README.md CHANGELOG.md",
     "format:check": "prettier --check src tests docs scripts/*.mjs *.json *.css *.mjs *.ts README.md CHANGELOG.md",

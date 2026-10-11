@@ -6,7 +6,7 @@ Local automated verification on 2026-10-10, Linux x64, Node 24.21.0, TypeScript 
 
 - Strict type checking: passed.
 - ESLint: passed, including type-aware misused promise, unsafe argument, assignment and member access checks in production source.
-- Unit and mocked integration/DOM/lifecycle tests: **56 passed, 0 failed**, seven files.
+- Unit and mocked integration/DOM/lifecycle tests: **58 passed, 0 failed**, seven files.
 - Production build: passed, browser-target CommonJS bundle; only Obsidian is external.
 - Dependency security audit: **0 vulnerabilities**. The initially selected Vitest 3 dependencies had advisories; replaced with Vitest 5 and compatible current esbuild. See dependency-audit.json.
 - Automated guideline smoke checks: passed (manifest/version consistency, description, licence, no unsafe HTML/eval/logging/desktop imports/obsolete API URLs, required build assets). This is not an official community-plugin review.

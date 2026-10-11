@@ -346,8 +346,8 @@ export default class Flowstitch extends Plugin {
     // observed in this session, the active note, and files under the
     // explicitly configured opt-in folders. No vault-wide enumeration.
     const paths = new Set<string>();
-    for (const link of Object.values(this.state.links)) {
-      if (link.path && !link.path.startsWith("pending:")) paths.add(link.path);
+    for (const [id, link] of Object.entries(this.state.links)) {
+      if (!id.startsWith("pending:") && link.path) paths.add(link.path);
     }
     for (const path of this.index) paths.add(path);
     const active = this.app.workspace?.getActiveFile?.();
@@ -387,7 +387,10 @@ export default class Flowstitch extends Plugin {
           );
           continue;
         }
-        if (typeof entry.path === "string" && entry.path.endsWith(".md"))
+        if (
+          typeof entry.path === "string" &&
+          entry.path.toLowerCase().endsWith(".md")
+        )
           out.push(entry.path);
       }
     }
