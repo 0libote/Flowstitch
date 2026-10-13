@@ -139,6 +139,11 @@
         gap: 8px;
         padding: 14px 0 8px;
       }
+      .flowstitch-toolbar select {
+        flex: 1 1 140px;
+        min-width: 0;
+        max-width: 100%;
+      }
       .flowstitch-search {
         flex: 1;
         min-width: 140px;
@@ -218,6 +223,27 @@
         box-shadow: none;
         font-size: var(--font-ui-smaller);
         padding: 3px 7px;
+        min-height: 32px;
+        min-width: 32px;
+      }
+      .flowstitch-alert {
+        color: var(--text-error);
+        font-size: var(--font-ui-smaller);
+        padding: 8px 0;
+      }
+      .flowstitch-form-error {
+        color: var(--text-error);
+        font-size: var(--font-ui-smaller);
+        margin: 8px 0;
+      }
+      .flowstitch-parent-link {
+        background: transparent;
+        box-shadow: none;
+        border: 0;
+        padding: 0;
+        color: var(--text-muted);
+        font-size: var(--font-ui-smaller);
+        text-align: left;
       }
       .flowstitch-empty {
         text-align: center;
@@ -268,11 +294,22 @@
         .flowstitch-row-actions {
           gap: 0;
         }
+        .flowstitch-toolbar select {
+          flex-basis: 100%;
+        }
         .flowstitch-summary span:last-child {
           width: 100%;
         }
         .flowstitch-header {
           align-items: flex-start;
+        }
+      }
+      @media (max-width: 320px) {
+        .flowstitch-toolbar input,
+        .flowstitch-toolbar select,
+        .flowstitch-toolbar button {
+          flex-basis: 100%;
+          max-width: 100%;
         }
       }
     </style>
@@ -291,23 +328,70 @@
           </p>
         </div>
         <div class="flowstitch-actions">
-          <button class="mod-cta" type="button">+ Capture</button
-          ><button type="button">Refresh</button
-          ><button type="button">Diagnostics</button>
+          <button class="mod-cta" type="button" data-key="capture">
+            + Capture</button
+          ><button type="button" data-key="refresh">Refresh</button
+          ><button type="button" data-key="diagnostics">Diagnostics</button>
         </div>
       </div>
-      <output class="flowstitch-status" aria-live="polite"
+      <output class="flowstitch-status" aria-live="polite" aria-atomic="true"
         ><span>Cached preview</span><span>0 pending · 0 conflicts</span></output
       >
       <div class="flowstitch-tabs" role="tablist" aria-label="Task views">
-        <button class="is-active" type="button" role="tab" aria-selected="true">
+        <button
+          class="is-active"
+          type="button"
+          role="tab"
+          id="flowstitch-tab-today"
+          aria-selected="true"
+          aria-controls="flowstitch-panel"
+          tabindex="0"
+        >
           Today</button
-        ><button type="button" role="tab" aria-selected="false">Upcoming</button
-        ><button type="button" role="tab" aria-selected="false">Projects</button
-        ><button type="button" role="tab" aria-selected="false">Inbox</button
-        ><button type="button" role="tab" aria-selected="false">
+        ><button
+          type="button"
+          role="tab"
+          id="flowstitch-tab-upcoming"
+          aria-selected="false"
+          aria-controls="flowstitch-panel"
+          tabindex="-1"
+        >
+          Upcoming</button
+        ><button
+          type="button"
+          role="tab"
+          id="flowstitch-tab-projects"
+          aria-selected="false"
+          aria-controls="flowstitch-panel"
+          tabindex="-1"
+        >
+          Projects</button
+        ><button
+          type="button"
+          role="tab"
+          id="flowstitch-tab-inbox"
+          aria-selected="false"
+          aria-controls="flowstitch-panel"
+          tabindex="-1"
+        >
+          Inbox</button
+        ><button
+          type="button"
+          role="tab"
+          id="flowstitch-tab-templates"
+          aria-selected="false"
+          aria-controls="flowstitch-panel"
+          tabindex="-1"
+        >
           Templates</button
-        ><button type="button" role="tab" aria-selected="false">
+        ><button
+          type="button"
+          role="tab"
+          id="flowstitch-tab-completed"
+          aria-selected="false"
+          aria-controls="flowstitch-panel"
+          tabindex="-1"
+        >
           Completed
         </button>
       </div>
@@ -317,53 +401,98 @@
           type="search"
           placeholder="Search cached tasks…"
           aria-label="Search tasks"
+          data-key="search"
         /><select aria-label="Filter project">
           <option value="">All projects</option>
           <option value="work">Work</option></select
-        ><button type="button">Apply Todoist filter</button>
+        ><button type="button" data-key="apply-filter">
+          Apply Todoist filter
+        </button>
       </div>
       <div class="flowstitch-summary">
         <span>2 tasks</span><span>Work 09:00–17:30 · Lunch 12:00–13:00</span>
       </div>
-      <div class="flowstitch-list">
-        <h3 class="flowstitch-group">Tasks</h3>
-        <ul class="flowstitch-task-list">
-          <li class="flowstitch-row priority-4">
+      <div
+        class="flowstitch-list"
+        id="flowstitch-panel"
+        role="tabpanel"
+        aria-labelledby="flowstitch-tab-today"
+        tabindex="0"
+      >
+        <h3 class="flowstitch-group" id="flowstitch-group-1">Tasks</h3>
+        <ul class="flowstitch-task-list" aria-labelledby="flowstitch-group-1">
+          <li class="flowstitch-row priority-4" data-key="row-one">
             <input
               type="checkbox"
               aria-label="Complete Review supplier prices"
+              data-key="check-one"
             />
             <div class="flowstitch-task-body">
-              <button class="flowstitch-task-title" type="button">
+              <button
+                class="flowstitch-task-title"
+                type="button"
+                data-key="title-one"
+                aria-haspopup="dialog"
+              >
                 Review supplier prices
               </button>
               <div class="flowstitch-task-meta">
-                <span>2026-10-11 13:30 ↻</span><span>Work</span
+                <span>2026-10-13 13:30 ↻</span><span>Work</span
                 ><span>#supplier</span>
               </div>
             </div>
             <div class="flowstitch-row-actions">
-              <button type="button" aria-label="Open in Todoist">↗</button
-              ><button type="button" aria-label="Task actions">⋯</button>
+              <button
+                type="button"
+                aria-label="Open in Todoist"
+                data-key="open-one"
+              >
+                ↗</button
+              ><button
+                type="button"
+                aria-label="Task actions"
+                aria-haspopup="menu"
+                data-key="more-one"
+              >
+                ⋯
+              </button>
             </div>
           </li>
-          <li class="flowstitch-row priority-2">
+          <li class="flowstitch-row priority-2" data-key="row-second">
             <input
               type="checkbox"
               aria-label="Complete Prepare Website News article"
+              data-key="check-second"
             />
             <div class="flowstitch-task-body">
-              <button class="flowstitch-task-title" type="button">
+              <button
+                class="flowstitch-task-title"
+                type="button"
+                data-key="title-second"
+                aria-haspopup="dialog"
+              >
                 Prepare Website News article
               </button>
               <div class="flowstitch-task-meta">
-                <span>2026-10-11 15:00</span><span>Work</span
+                <span>2026-10-13 15:00</span><span>Work</span
                 ><span>#supplier</span>
               </div>
             </div>
             <div class="flowstitch-row-actions">
-              <button type="button" aria-label="Open in Todoist">↗</button
-              ><button type="button" aria-label="Task actions">⋯</button>
+              <button
+                type="button"
+                aria-label="Open in Todoist"
+                data-key="open-second"
+              >
+                ↗</button
+              ><button
+                type="button"
+                aria-label="Task actions"
+                aria-haspopup="menu"
+                data-key="more-second"
+              >
+                ⋯
+              </button>
             </div>
           </li>
         </ul>
