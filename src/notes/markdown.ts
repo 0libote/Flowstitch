@@ -19,6 +19,49 @@ interface Metadata {
   labels?: string[];
   parent_id?: string | null;
 }
+function validMetaDate(value: unknown): boolean {
+  if (typeof value !== "string" || !value) return false;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const d = new Date(value + "T12:00:00Z");
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+  }
+  if (/^\d{4}-\d{2}-\d{2}T/.test(value)) {
+    return !Number.isNaN(new Date(value).getTime());
+  }
+  return false;
+}
+
+function validMetadata(meta: Metadata): boolean {
+  if (typeof meta.key !== "string" || !meta.key) return false;
+  if (meta.id !== undefined && typeof meta.id !== "string") return false;
+  if (meta.due !== undefined && meta.due !== null) {
+    if (!meta.due || typeof meta.due !== "object") return false;
+    const due = meta.due as { date?: unknown };
+    if (typeof due.date !== "string" || !validMetaDate(due.date)) return false;
+  }
+  if (meta.priority !== undefined) {
+    if (
+      typeof meta.priority !== "number" ||
+      !Number.isInteger(meta.priority) ||
+      meta.priority < 1 ||
+      meta.priority > 4
+    )
+      return false;
+  }
+  if (meta.project_id !== undefined && typeof meta.project_id !== "string")
+    return false;
+  if (meta.labels !== undefined) {
+    if (!Array.isArray(meta.labels)) return false;
+    if (!meta.labels.every((l) => typeof l === "string")) return false;
+  }
+  if (
+    meta.parent_id !== undefined &&
+    meta.parent_id !== null &&
+    typeof meta.parent_id !== "string"
+  )
+    return false;
+  return true;
+}
 const metaPattern = /^[ \t]*<!-- flowstitch:(\{.*\}) -->[ \t]*$/;
 const foreign =
   /<!--\s*(?:todoist-id|todoist_id)|\[todoist_id::|%%.*todoist|\^todoist-/i;
@@ -80,7 +123,7 @@ export function scan(
     if (mm) {
       try {
         meta = JSON.parse(mm[1]!) as Metadata;
-        if (typeof meta.key !== "string") continue;
+        if (!validMetadata(meta)) continue;
       } catch {
         continue;
       }
@@ -187,7 +230,9 @@ export function insertDaily(text: string, heading: string): string {
   return lines.join("\n");
 }
 export function uri(vault: string, path: string, anchor = ""): string {
-  return `obsidian://open?vault=${encodeURIComponent(vault)}&file=${encodeURIComponent(path + (anchor ? "#" + anchor : ""))}`;
+  const encode = (value: string): string =>
+    encodeURIComponent(value).replace(/\(/g, "%28").replace(/\)/g, "%29");
+  return `obsidian://open?vault=${encode(vault)}&file=${encode(path + (anchor ? "#" + anchor : ""))}`;
 }
 
 /** Losing local context needs an explicit comparison, even for a remote-only title edit. */

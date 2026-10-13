@@ -2,15 +2,22 @@ import {
   Modal,
   Setting,
   Notice,
-  normalizePath,
   type App,
   type TextAreaComponent,
 } from "obsidian";
 import type Flowstitch from "../main";
 import { type Task, type Preset, fields, uuid } from "../types";
 import { rescheduleDue } from "../notes/dates";
-import { button, template, safeNoteName } from "./helpers";
+import {
+  button,
+  template,
+  safeNoteName,
+  truncateDisplay,
+  isValidAnchor,
+  resolveVaultPath,
+} from "./helpers";
 export class ConnectionModal extends Modal {
+  private token = "";
   constructor(private plugin: Flowstitch) {
     super(plugin.app);
   }
@@ -49,10 +56,11 @@ export class ConnectionModal extends Modal {
         t.inputEl.autocomplete = "off";
         t.setPlaceholder("Paste your Todoist token").onChange((v) => {
           token = v.trim();
+          this.token = token;
         });
       });
     this.contentEl.createEl("p", {
-      text: "Only opted-in task text and links are sent to Todoist. If connecting fails, re-copy the full token without extra spaces.",
+      text: "Only opted-in task text and links are sent to Todoist. Attaching a note sends an obsidian:// link that includes your vault name. If connecting fails, re-copy the full token without extra spaces.",
       cls: "flowstitch-muted",
     });
     button(
@@ -64,6 +72,8 @@ export class ConnectionModal extends Modal {
           this.plugin.state.settings.secretName,
           token,
         );
+        token = "";
+        this.token = "";
         await this.plugin.engine.sync(true);
         if (
           this.plugin.engine.status === "Authentication required" ||
@@ -94,6 +104,7 @@ export class ConnectionModal extends Modal {
     );
   }
   onClose(): void {
+    this.token = "";
     this.contentEl.empty();
   }
 }
@@ -191,7 +202,7 @@ export class TaskModal extends Modal {
     new Setting(this.contentEl).setName("Project").addDropdown((d) => {
       d.addOption("", "Todoist Inbox");
       for (const p of Object.values(this.plugin.state.projects))
-        d.addOption(p.id, p.name);
+        d.addOption(p.id, truncateDisplay(p.name, 70));
       d.setValue(project).onChange((v) => {
         project = v;
       });
@@ -212,20 +223,23 @@ export class TaskModal extends Modal {
         for (const t of Object.values(this.plugin.state.tasks).filter(
           (t) => !t.checked && !t.is_deleted && t.id !== this.task?.id,
         ))
-          d.addOption(t.id, t.content.slice(0, 70));
+          d.addOption(t.id, truncateDisplay(t.content, 70));
         d.setValue(parent).onChange((v) => {
           parent = v;
         });
       });
     new Setting(this.contentEl)
       .setName("Related note")
-      .setDesc("Vault-relative Markdown path. Only the link is attached.")
+      .setDesc(
+        "Vault-relative Markdown path. Only an obsidian:// link (including your vault name) is attached.",
+      )
       .addText((t) =>
         t
           .setValue(note)
           .setPlaceholder("Suppliers/Example.md")
           .onChange((v) => {
             note = v;
+            updatePreview();
           }),
       );
     new Setting(this.contentEl)
@@ -239,8 +253,30 @@ export class TaskModal extends Modal {
           .setPlaceholder("Prices or ^supplier")
           .onChange((v) => {
             anchor = v.trim();
+            updatePreview();
           }),
       );
+    const preview = this.contentEl.createEl("p", {
+      cls: "flowstitch-muted",
+    });
+    const updatePreview = (): void => {
+      const trimmed = note.trim();
+      if (!trimmed) {
+        preview.textContent = "No note link will be attached.";
+        return;
+      }
+      try {
+        const resolved = resolveVaultPath(trimmed);
+        const link = this.plugin.noteUri(
+          resolved,
+          isValidAnchor(anchor) ? anchor : "",
+        );
+        preview.textContent = `Link preview (vault name included): ${link}`;
+      } catch {
+        preview.textContent = "Link preview unavailable: invalid note path.";
+      }
+    };
+    updatePreview();
     if (this.preset) {
       new Setting(this.contentEl)
         .setName("Create matching note")
@@ -267,9 +303,14 @@ export class TaskModal extends Modal {
           throw new Error("Enable writing on this device in settings");
         if (parent && this.plugin.state.tasks[parent]?.project_id !== project)
           throw new Error("Parent must belong to the selected project");
-        let resolvedNote = note.trim() ? normalizePath(note.trim()) : "";
-        if (resolvedNote && !this.plugin.app.vault.getFileByPath(resolvedNote))
-          throw new Error("Related note does not exist");
+        if (anchor && !isValidAnchor(anchor))
+          throw new Error("Heading or block reference is invalid");
+        let resolvedNote = "";
+        if (note.trim()) {
+          resolvedNote = resolveVaultPath(note.trim());
+          if (!this.plugin.app.vault.getFileByPath(resolvedNote))
+            throw new Error("Related note does not exist");
+        }
         let content = title.trim();
         let desc = description;
         const key = uuid();
@@ -278,16 +319,16 @@ export class TaskModal extends Modal {
           content = template(this.preset.content, values);
           desc = template(this.preset.description, values);
           if (createNote) {
-            resolvedNote = normalizePath(
-              (this.preset.folder ? this.preset.folder + "/" : "") +
-                safeNoteName(title) +
-                ".md",
-            );
+            const folder = this.preset.folder
+              ? resolveVaultPath(this.preset.folder)
+              : "";
+            resolvedNote =
+              (folder ? folder + "/" : "") + safeNoteName(title) + ".md";
             if (this.plugin.app.vault.getAbstractFileByPath(resolvedNote))
               throw new Error(
                 "Matching note already exists; choose a different title",
               );
-            await this.plugin.ensureFolder(this.preset.folder);
+            await this.plugin.ensureFolder(folder);
             await this.plugin.app.vault.create(
               resolvedNote,
               template(this.preset.noteTemplate, values),
@@ -472,7 +513,7 @@ export class PresetModal extends Modal {
     new Setting(this.contentEl).setName("Default project").addDropdown((d) => {
       d.addOption("", "Default project");
       for (const p of Object.values(this.plugin.state.projects))
-        d.addOption(p.id, p.name);
+        d.addOption(p.id, truncateDisplay(p.name, 70));
       d.setValue(value.projectId).onChange((v) => {
         value.projectId = v;
       });
@@ -498,7 +539,7 @@ export class PresetModal extends Modal {
         for (const t of Object.values(this.plugin.state.tasks).filter(
           (t) => !t.checked && t.content.includes("[MASTER TEMPLATE]"),
         ))
-          d.addOption(t.id, t.content);
+          d.addOption(t.id, truncateDisplay(t.content, 70));
         d.setValue(value.masterId ?? "").onChange((v) => {
           value.masterId = v || undefined;
           if (v)
@@ -518,6 +559,7 @@ export class PresetModal extends Modal {
       async () => {
         if (!value.name.trim() || !value.content.trim())
           throw new Error("Name and title template are required");
+        if (value.folder) value.folder = resolveVaultPath(value.folder);
         const list = this.plugin.state.settings.presets;
         const index = list.findIndex((p) => p.id === value.id);
         if (index < 0) list.push(value);

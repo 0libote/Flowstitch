@@ -64,6 +64,34 @@ function validDueDate(value: string): boolean {
   }
   return false;
 }
+export function parseProject(raw: unknown): Project {
+  const p = record(raw);
+  if (typeof p.id !== "string" || typeof p.name !== "string")
+    throw new Error("Unexpected Todoist project");
+  return {
+    id: p.id,
+    name: p.name.slice(0, 200),
+    ...(typeof p.inbox_project === "boolean"
+      ? { inbox_project: p.inbox_project }
+      : {}),
+    ...(p.is_deleted === true ? { is_deleted: true } : {}),
+  };
+}
+
+export function parseSection(raw: unknown): Section {
+  const s = record(raw);
+  if (typeof s.id !== "string" || typeof s.name !== "string")
+    throw new Error("Unexpected Todoist section");
+  if (typeof s.project_id !== "string")
+    throw new Error("Unexpected Todoist section");
+  return {
+    id: s.id,
+    name: s.name.slice(0, 200),
+    project_id: s.project_id,
+    ...(s.is_deleted === true ? { is_deleted: true } : {}),
+  };
+}
+
 export function parseTask(raw: unknown): Task {
   const t = record(raw);
   if (
@@ -101,6 +129,10 @@ export class TodoistClient {
     private transport: Transport,
     private secret: () => string | null,
   ) {}
+  resetAuth(): void {
+    this.verifiedToken = "";
+    this.verifiedAccount = "";
+  }
   private async request(
     path: string,
     method = "GET",
@@ -164,8 +196,28 @@ export class TodoistClient {
       sync_token: r.sync_token,
       full_sync: !!r.full_sync,
       items: r.items.map(parseTask),
-      projects: (r.projects ?? []) as Project[],
-      sections: (r.sections ?? []) as Section[],
+      projects: Array.isArray(r.projects)
+        ? r.projects
+            .map((p) => {
+              try {
+                return parseProject(p);
+              } catch {
+                return null;
+              }
+            })
+            .filter((p): p is Project => p !== null)
+        : [],
+      sections: Array.isArray(r.sections)
+        ? r.sections
+            .map((s) => {
+              try {
+                return parseSection(s);
+              } catch {
+                return null;
+              }
+            })
+            .filter((s): s is Section => s !== null)
+        : [],
       sync_status: (r.sync_status ?? {}) as SyncResponse["sync_status"],
       temp_id_mapping: (r.temp_id_mapping ?? {}) as Record<string, string>,
     };

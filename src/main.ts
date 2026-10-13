@@ -24,7 +24,15 @@ import {
   type DashboardTab,
 } from "./ui/dashboard";
 import { ConnectionModal, TaskModal, TextModal } from "./ui/modals";
-import { button, dateKey } from "./ui/helpers";
+import {
+  button,
+  dateKey,
+  resolveVaultPath,
+  sanitizeSnapshotContent,
+  truncateDisplay,
+  truncateUi,
+  isValidHolidayEvents,
+} from "./ui/helpers";
 import { rescheduleDue, zonedDateTime } from "./notes/dates";
 import { insertDaily, uri } from "./notes/markdown";
 export default class Flowstitch extends Plugin {
@@ -115,6 +123,11 @@ export default class Flowstitch extends Plugin {
       id: "connect",
       name: "Connect Todoist",
       callback: () => this.connect(),
+    });
+    this.addCommand({
+      id: "disconnect",
+      name: "Disconnect Todoist",
+      callback: () => this.disconnect(),
     });
     this.addCommand({
       id: "sync-now",
@@ -351,9 +364,15 @@ export default class Flowstitch extends Plugin {
     return this.saving;
   }
   folderOptIn(path: string): boolean {
-    return this.state.settings.folders.some((folder) =>
-      path.startsWith(normalizePath(folder) + "/"),
-    );
+    return this.state.settings.folders.some((folder) => {
+      try {
+        const resolved = resolveVaultPath(folder);
+        if (!resolved) return false;
+        return path.startsWith(resolved + "/");
+      } catch {
+        return false;
+      }
+    });
   }
   async reindex(): Promise<void> {
     // Scoped re-validation only: previously linked notes, notes already
@@ -383,7 +402,12 @@ export default class Flowstitch extends Plugin {
     );
     if (!getAbstract) return out;
     for (const folder of this.state.settings.folders) {
-      const normalized = normalizePath(folder);
+      let normalized = "";
+      try {
+        normalized = resolveVaultPath(folder);
+      } catch {
+        continue;
+      }
       if (!normalized) continue;
       const root = getAbstract(normalized) as unknown as {
         children?: unknown;
@@ -506,6 +530,15 @@ export default class Flowstitch extends Plugin {
   connect(): void {
     new ConnectionModal(this).open();
   }
+  async disconnect(): Promise<void> {
+    this.app.secretStorage.setSecret(this.state.settings.secretName, "");
+    this.api.resetAuth();
+    this.state.accountId = undefined;
+    this.state.token = "*";
+    await this.save();
+    this.engine.emit();
+    new Notice("Todoist disconnected on this device.");
+  }
   async openDashboard(sidebar: boolean): Promise<void> {
     const leaf = sidebar
       ? this.app.workspace.getRightLeaf(false)
@@ -544,7 +577,7 @@ export default class Flowstitch extends Plugin {
     new Setting(modal.contentEl).setName("Todoist project").addDropdown((d) => {
       d.addOption("", "Choose a project");
       for (const p of Object.values(this.state.projects))
-        d.addOption(p.id, p.name);
+        d.addOption(p.id, truncateDisplay(p.name, 70));
       d.onChange((value) => {
         project = value;
       });
@@ -597,12 +630,13 @@ export default class Flowstitch extends Plugin {
     const date = (
       moment as unknown as (value: string) => { format(format: string): string }
     )(dateKey(new Date(), settings.timezone)).format(settings.dailyFormat);
-    const path = normalizePath(
-      (settings.dailyFolder ? settings.dailyFolder + "/" : "") + date + ".md",
-    );
+    const folder = settings.dailyFolder
+      ? resolveVaultPath(settings.dailyFolder)
+      : "";
+    const path = (folder ? folder + "/" : "") + date + ".md";
     let file = this.app.vault.getFileByPath(path);
     if (!file) {
-      await this.ensureFolder(settings.dailyFolder);
+      await this.ensureFolder(folder);
       file = await this.app.vault.create(
         path,
         insertDaily(
@@ -614,11 +648,11 @@ export default class Flowstitch extends Plugin {
     await this.app.workspace.getLeaf(false).openFile(file);
   }
   async ensureFolder(folder: string): Promise<void> {
-    const normalized = normalizePath(folder);
+    const normalized = folder ? resolveVaultPath(folder) : "";
     if (!normalized) return;
+    // Explicit user actions (daily note, preset note) confirm creation by invoking this.
     let current = "";
     for (const part of normalized.split("/")) {
-      if (part === "..") throw new Error("Folder must remain inside the vault");
       current += (current ? "/" : "") + part;
       if (!this.app.vault.getAbstractFileByPath(current))
         await this.app.vault.createFolder(current);
@@ -656,11 +690,11 @@ export default class Flowstitch extends Plugin {
           text: `${op.command.type} · attempts ${op.attempts} · ${op.error ?? "Waiting"}`,
         });
         if (op.error)
-          button(operationRow, "Review rejected operation", () => {
+          button(operationRow, "Review unsanitised local operation", () => {
             const review = new Modal(this.app);
-            review.setTitle("Review retained operation");
+            review.setTitle("Unsanitised local operation (local-only)");
             review.contentEl.createEl("p", {
-              text: "Copy any changes you want to keep before discarding this rejected queue entry. Existing Markdown and remote tasks will not be deleted.",
+              text: "Unsanitised local-only content. Do not share or paste externally. Copy any changes you want to keep before discarding this rejected queue entry. Existing Markdown and remote tasks will not be deleted.",
             });
             review.contentEl.createEl("pre", {
               text: JSON.stringify(
@@ -744,7 +778,7 @@ export default class Flowstitch extends Plugin {
       zonedDateTime(day, "00:00", this.state.settings.timezone),
       new Date().toISOString(),
     );
-    const text = `\n## Completed work · ${day}\n\nHistorical record (not synchronised tasks):\n${tasks.map((t) => "- " + t.content.replace(/[\r\n]/g, " ")).join("\n")}\n`;
+    const text = `\n## Completed work · ${day}\n\nHistorical record (not synchronised tasks):\n${tasks.map((t) => "- " + sanitizeSnapshotContent(t.content)).join("\n")}\n`;
     const modal = new Modal(this.app);
     modal.setTitle("Append historical record");
     modal.contentEl.createEl("pre", { text });
@@ -785,12 +819,14 @@ export default class Flowstitch extends Plugin {
         t.due &&
         t.due.date.slice(0, 10) <= today,
     ))
-      new Setting(modal.contentEl).setName(task.content).addToggle((t) =>
-        t.onChange((v) => {
-          if (v) selected.add(task.id);
-          else selected.delete(task.id);
-        }),
-      );
+      new Setting(modal.contentEl)
+        .setName(truncateUi(task.content, 80))
+        .addToggle((t) =>
+          t.onChange((v) => {
+            if (v) selected.add(task.id);
+            else selected.delete(task.id);
+          }),
+        );
     button(
       modal.contentEl,
       "Move selected tasks",
@@ -815,12 +851,14 @@ export default class Flowstitch extends Plugin {
             { events: { date: string }[] }
           >;
           const events = data["england-and-wales"]?.events;
-          if (!events) throw new Error("Holiday calendar unavailable");
-          if (!events.some((event) => event.date.startsWith(date.slice(0, 4))))
+          if (!isValidHolidayEvents(events))
+            throw new Error("Holiday calendar unavailable");
+          const list = events as { date: string }[];
+          if (!list.some((event) => event.date.startsWith(date.slice(0, 4))))
             throw new Error(
               "Government calendar has no holiday data for the chosen year",
             );
-          const holidays = new Set(events.map((e) => e.date));
+          const holidays = new Set(list.map((e) => e.date));
           let next = new Date(date + "T12:00:00Z");
           for (let i = 0; i < 31; i++) {
             const key = next.toISOString().slice(0, 10);
@@ -891,6 +929,15 @@ export class FlowstitchSettings extends PluginSettingTab {
       },
     );
     define(
+      "Disconnect Todoist",
+      "Clears the token from Secret Storage on this device and resets local sync state.",
+      (row) => {
+        row.addButton((b) =>
+          b.setButtonText("Disconnect").onClick(() => this.plugin.disconnect()),
+        );
+      },
+    );
+    define(
       "Enable writing on this device",
       "Choose one writer for Markdown sync. Other devices stay read-only. No ordinary checkboxes are opted in automatically.",
       (row) => {
@@ -938,7 +985,7 @@ export class FlowstitchSettings extends PluginSettingTab {
       row.addDropdown((d) => {
         d.addOption("", "Todoist Inbox");
         for (const p of Object.values(this.plugin.state.projects))
-          d.addOption(p.id, p.name);
+          d.addOption(p.id, truncateDisplay(p.name, 70));
         d.setValue(settings.defaultProject).onChange(
           this.handleChange(async (v) => {
             settings.defaultProject = v;
@@ -1003,7 +1050,8 @@ export class FlowstitchSettings extends PluginSettingTab {
               settings.folders = v
                 .split("\n")
                 .map((s) => s.trim())
-                .filter(Boolean);
+                .filter(Boolean)
+                .map((s) => resolveVaultPath(s));
               await this.plugin.save();
               await this.plugin.reindex();
             }),
