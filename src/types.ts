@@ -186,5 +186,17 @@ export function fields(task: Task): Fields {
   };
 }
 export const equal = (a: unknown, b: unknown): boolean =>
-  JSON.stringify(a) === JSON.stringify(b);
+  stable(a) === stable(b);
+function stable(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map((v) => stable(v)).join(",")}]`;
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .sort(([ka], [kb]) => (ka < kb ? -1 : ka > kb ? 1 : 0));
+    return `{${entries
+      .map(([k, v]) => `${JSON.stringify(k)}:${stable(v)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "null";
+}
 export const uuid = (): string => crypto.randomUUID();

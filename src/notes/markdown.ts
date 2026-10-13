@@ -22,6 +22,24 @@ interface Metadata {
 const metaPattern = /^[ \t]*<!-- flowstitch:(\{.*\}) -->[ \t]*$/;
 const foreign =
   /<!--\s*(?:todoist-id|todoist_id)|\[todoist_id::|%%.*todoist|\^todoist-/i;
+function escapeReg(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function hasMarker(body: string, marker: string): boolean {
+  if (!marker) return false;
+  return new RegExp(`(^|\\W)${escapeReg(marker)}(\\W|$)`).test(body);
+}
+function stripMarker(body: string, marker: string): string {
+  if (!marker) return body;
+  const cleaned = body.replace(
+    new RegExp(`(^|\\W)${escapeReg(marker)}(?=\\W|$)`),
+    (_m, prefix: string) => prefix,
+  );
+  return cleaned
+    .replace(/\(\s*[,;]?\s*\)/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
 const reserved =
   /^(.*?)(\s+(?:📅|⏳|🛫|✅|➕|🔺|⏫|🔼|🔽|⏬|🔁|🆔|⛔|🏁|\[[\w -]+::|<!--|%%|\^)[\s\S]*)$/;
 export function scan(
@@ -68,18 +86,9 @@ export function scan(
       }
     }
     const body = m[4]!;
-    const opted = body.split(/\s+/).includes(marker);
+    const opted = hasMarker(body, marker);
     if (!meta && !opted && !folderOptIn) continue;
-    const stripped = body
-      .replace(
-        new RegExp(
-          "(^|[ \t]+)" +
-            marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") +
-            "(?=[ \t]|$)",
-        ),
-        "",
-      )
-      .trim();
+    const stripped = stripMarker(body, marker);
     const split = stripped.match(reserved);
     const content = (split?.[1] ?? stripped).trim();
     const suffix = split?.[2] ?? "";
