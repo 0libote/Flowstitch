@@ -1,15 +1,15 @@
 # Actual test report
 
-Local automated verification on 2026-10-10, Linux x64, Node 24.21.0, TypeScript 5.9.3, Vitest 5.0.3, esbuild 0.28.2, ESLint 10.12.0, jsdom 30.1.2. No Obsidian executable or dedicated Todoist test credentials were available. No tasks were created, completed or deleted in a real Todoist account. No actual Mac/iPhone/iPad/Android device testing is claimed.
+Local automated verification on 2026-10-13, Linux x64, Node 24.21.0, TypeScript 5.9.3, Vitest 5.0.3, esbuild 0.28.2, ESLint 10.12.0, jsdom 30.1.2. No Obsidian executable or dedicated Todoist test credentials were available. No tasks were created, completed or deleted in a real Todoist account. No actual Mac/iPhone/iPad/Android device testing is claimed.
 
 ## Results
 
 - Strict type checking: passed.
 - ESLint: passed, including type-aware misused promise, unsafe argument, assignment and member access checks in production source.
-- Unit and mocked integration/DOM/lifecycle tests: **58 passed, 0 failed**, seven files.
+- Unit and mocked integration/DOM/lifecycle tests: **58 passed, 0 failed** across 7 test files. (The vitest JSON reporter records `numTotalTestSuites: 8` for the same run while listing the same 7 files; the text reporter and the file list agree on 7.)
 - Production build: passed, browser-target CommonJS bundle; only Obsidian is external.
 - Dependency security audit: **0 vulnerabilities**. The initially selected Vitest 3 dependencies had advisories; replaced with Vitest 5 and compatible current esbuild. See dependency-audit.json.
-- Automated guideline smoke checks: passed (manifest/version consistency, description, licence, no unsafe HTML/eval/logging/desktop imports/obsolete API URLs, required build assets). This is not an official community-plugin review.
+- Automated guideline smoke checks: passed (manifest/version consistency, description, licence, desktop-only declaration, versions.json mapping, no unsafe HTML/eval/logging/desktop imports/obsolete API URLs, scoped CSS and theme variables, kebab-case command IDs, dist secret scan, required build assets including LICENSE). This is not an official community-plugin review.
 - Desktop light (728 px) and phone dark (360 px) HTML previews: manually inspected for visual layout using production Dashboard DOM with fixture tasks and theme-variable harness. No console exceptions or horizontal page overflow. These are browser simulations, not Obsidian app screenshots.
 - Machine-readable test results are in test-results.json. Each named assertion identifies its scope. Build/package files and checksums are in dist.
 

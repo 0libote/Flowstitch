@@ -2,7 +2,7 @@
 
 Your notes and tasks, seamlessly connected.
 
-A native Obsidian desktop/mobile plugin that connects directly to Todoist's unified API v1. Version 0.1.0 is a local beta build: automated tests pass; live Todoist and real Obsidian desktop/mobile acceptance checks are still required before community publication. No other community plugin is required.
+A native Obsidian desktop/mobile plugin that connects directly to Todoist's unified API v1. Version 0.1.3 is a local beta build: automated tests pass; live Todoist and real Obsidian desktop/mobile acceptance checks are still required before community publication. No other community plugin is required.
 
 ## Install
 
@@ -49,4 +49,4 @@ Multi-device initial creation while devices have independent offline vault copie
 
 MIT licensed. No source from third-party community plugins is bundled. The official Obsidian API typings and the protocol patterns in reviewed integrations informed the implementation; see RESEARCH.md for revisions and licensing. Obsidian and Todoist are trademarks of their respective owners; Flowstitch is an independent integration.
 
-Flowstitch remains a working name. Its plugin ID was absent from the checked registry, but an unrelated academic security tool already uses FLOWSTITCH; resolve naming before public release.
+Flowstitch remains a working name. Its plugin ID was absent from the checked registry, but an unrelated academic security tool already uses FLOWSTITCH; resolve naming before public release. Decision for this beta: keep the Flowstitch name and ID in code and docs, with the trademark note above (Obsidian and Todoist belong to their owners; Flowstitch is an independent integration and claims no affiliation). A rename — manifest/package/plugin folder, code-block names, commands, CSS and documented markers together — remains an option before community-registry submission if the collision review requires it, but no code rename is made in this release.
