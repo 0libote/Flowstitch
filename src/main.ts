@@ -172,6 +172,9 @@ export default class Flowstitch extends Plugin {
       id: "open-native-daily-note",
       name: "Open native Daily Note",
       callback: () => {
+        // Public obsidian://daily URI route (see RESEARCH.md); unverified on
+        // mobile/sandboxed hosts — use "Open daily planning note" (workspace
+        // API) if this fails there. See docs/LIMITATIONS.md.
         window.open(
           `obsidian://daily?${`vault=${encodeURIComponent(this.app.vault.getName())}`}`,
         );
