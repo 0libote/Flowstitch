@@ -44,6 +44,26 @@ function record(value: unknown): Record<string, unknown> {
     throw new Error("Unexpected Todoist response");
   return value as Record<string, unknown>;
 }
+function parseRetryAfter(header: string | undefined): number {
+  if (!header) return 0;
+  const numeric = Number(header) * 1000;
+  if (Number.isFinite(numeric) && numeric >= 0) return numeric;
+  const parsed = Date.parse(header) - Date.now();
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  return 0;
+}
+function validDueDate(value: string): boolean {
+  if (!value) return false;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const d = new Date(value + "T12:00:00Z");
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+  }
+  if (/^\d{4}-\d{2}-\d{2}T/.test(value)) {
+    const d = new Date(value);
+    return !Number.isNaN(d.getTime());
+  }
+  return false;
+}
 export function parseTask(raw: unknown): Task {
   const t = record(raw);
   if (
@@ -52,6 +72,12 @@ export function parseTask(raw: unknown): Task {
     typeof t.project_id !== "string"
   )
     throw new Error("Unexpected Todoist task");
+  let due: Task["due"] = null;
+  if (t.due && typeof t.due === "object") {
+    const d = t.due as Record<string, unknown>;
+    if (typeof d.date === "string" && validDueDate(d.date))
+      due = t.due as Task["due"];
+  }
   return {
     id: t.id,
     content: t.content,
@@ -63,12 +89,7 @@ export function parseTask(raw: unknown): Task {
     labels: Array.isArray(t.labels)
       ? t.labels.filter((l): l is string => typeof l === "string")
       : [],
-    due:
-      t.due &&
-      typeof t.due === "object" &&
-      typeof (t.due as Record<string, unknown>).date === "string"
-        ? (t.due as Task["due"])
-        : null,
+    due,
     checked: !!(t.checked ?? t.is_completed),
     is_deleted: !!t.is_deleted,
   };
@@ -113,13 +134,7 @@ export class TodoistClient {
       const header = Object.entries(res.headers).find(
         ([key]) => key.toLowerCase() === "retry-after",
       )?.[1];
-      const delay = header ? Number(header) * 1000 : 0;
-      throw new ApiError(
-        res.status,
-        Number.isFinite(delay)
-          ? delay
-          : Math.max(0, Date.parse(header ?? "") - Date.now()),
-      );
+      throw new ApiError(res.status, parseRetryAfter(header));
     }
     return res.json;
   }
@@ -162,7 +177,9 @@ export class TodoistClient {
     const results: unknown[] = [];
     let cursor: string | null = null;
     const seen = new Set<string>();
+    let pages = 0;
     do {
+      if (pages >= 50) throw new Error("PaginationLimit: too many pages");
       const query = new URLSearchParams({
         ...params,
         ...(cursor ? { cursor } : {}),
@@ -171,6 +188,9 @@ export class TodoistClient {
       const entries = r.results ?? r.items;
       if (!isUnknownArray(entries)) throw new Error("Unexpected Todoist page");
       results.push(...entries);
+      if (results.length > 5000)
+        throw new Error("PaginationLimit: too many items");
+      pages++;
       cursor = typeof r.next_cursor === "string" ? r.next_cursor : null;
       if (cursor && seen.has(cursor))
         throw new Error("Repeated Todoist pagination cursor");

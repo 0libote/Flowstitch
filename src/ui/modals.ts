@@ -374,14 +374,27 @@ export class TaskModal extends Modal {
               resolvedNote || undefined,
               key,
             );
-          if (steps && this.preset)
+          if (steps && this.preset) {
+            try {
+              await this.plugin.save();
+              await this.plugin.engine.sync(true);
+            } catch {
+              // Parent is still queued; children fall back to the temp key.
+            }
+            const realParent =
+              (
+                this.plugin.engine.state as unknown as
+                  | { links?: Record<string, { path: string }> }
+                  | undefined
+              )?.links?.["pending:" + key]?.path ?? key;
             for (const step of this.preset.subtasks)
               await this.plugin.engine.create({
                 content: step,
-                parent_id: key,
+                parent_id: realParent,
                 ...(project ? { project_id: project } : {}),
                 auto_reminder: false,
               });
+          }
         }
         await this.plugin.save();
         this.close();

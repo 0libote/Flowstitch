@@ -52,6 +52,16 @@ export default class Flowstitch extends Plugin {
         ...initialState().settings,
         ...this.state.settings,
       };
+      try {
+        new Intl.DateTimeFormat("en", {
+          timeZone: this.state.settings.timezone,
+        });
+      } catch {
+        this.state.settings.timezone = initialState().settings.timezone;
+        new Notice(
+          "Flowstitch timezone was invalid and was reset to Europe/London.",
+        );
+      }
     }
     this.writerKey = "flowstitch-writer";
     this.api = new TodoistClient(
@@ -261,14 +271,12 @@ export default class Flowstitch extends Plugin {
             (l.path === oldPath || l.path.startsWith(oldPath + "/")),
         );
         for (const [id, link] of affected) {
-          const path = file.path + link.path.slice(oldPath.length);
+          const oldLinkPath = link.path;
+          const path = file.path + oldLinkPath.slice(oldPath.length);
           link.path = path;
           const task = this.state.tasks[id];
           if (task && this.canWrite()) {
-            const old = this.noteUri(
-              oldPath + link.path.slice(file.path.length),
-              link.anchor,
-            );
+            const old = this.noteUri(oldLinkPath, link.anchor);
             const next = this.noteUri(path, link.anchor);
             if (task.description.includes(old))
               void this.engine
@@ -286,6 +294,12 @@ export default class Flowstitch extends Plugin {
           }
         }
         this.index.delete(oldPath);
+        for (const indexed of Array.from(this.index)) {
+          if (indexed.startsWith(oldPath + "/")) {
+            this.index.delete(indexed);
+            this.index.add(file.path + indexed.slice(oldPath.length));
+          }
+        }
         if (file instanceof TFile) void this.indexFile(file);
         void this.save();
       }),

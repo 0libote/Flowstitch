@@ -34,6 +34,7 @@ export class SyncEngine {
   status = "Disconnected";
   error = "";
   private running?: Promise<void>;
+  private pendingForce = false;
   private stopped = false;
   private listeners = new Set<() => void>();
   private retryAt = 0;
@@ -87,7 +88,7 @@ export class SyncEngine {
     noteBaseline?: Fields,
   ): Promise<void> {
     this.writable();
-    if (this.state.queue.some((o) => o.target === task.id))
+    if (this.state.queue.some((o) => o.target === task.id && !o.error))
       throw new Error("This task already has a pending operation");
     const commands = this.commands(task, desired, description);
     for (const command of commands)
@@ -153,29 +154,90 @@ export class SyncEngine {
   }
   sync(force = false): Promise<void> {
     if (this.stopped) return Promise.resolve();
-    if (this.running) return this.running;
+    if (this.running) {
+      if (force) this.pendingForce = true;
+      return this.running;
+    }
     if (!force && this.retryAt > this.port.now()) return Promise.resolve();
-    this.running = this.run().finally(() => {
+    this.running = this.drain().finally(() => {
       this.running = undefined;
     });
     return this.running;
   }
+  private async drain(): Promise<void> {
+    do {
+      this.pendingForce = false;
+      await this.run();
+      if (this.stopped) break;
+      if (this.pendingForce) continue;
+      break;
+    } while (true);
+  }
   private apply(response: SyncResponse): void {
     if (response.full_sync) {
       const previous = this.state.tasks;
+      const incomingIds = new Set(response.items.map((t) => t.id));
       this.state.tasks = {};
       for (const t of Object.values(previous))
         if (t.checked || t.is_deleted) this.state.tasks[t.id] = t;
       this.state.projects = {};
       this.state.sections = {};
-    }
-    for (const task of response.items) {
-      if (task.is_deleted) {
-        const prior = this.state.tasks[task.id];
-        this.state.tasks[task.id] = prior
-          ? { ...prior, is_deleted: true }
-          : task;
-      } else this.state.tasks[task.id] = task;
+      for (const task of response.items) {
+        if (task.is_deleted) {
+          const prior = previous[task.id];
+          this.state.tasks[task.id] = prior
+            ? { ...prior, is_deleted: true }
+            : task;
+        } else this.state.tasks[task.id] = task;
+      }
+      for (const id of Object.keys(previous)) {
+        if (!this.state.tasks[id] && !incomingIds.has(id)) {
+          const prev = previous[id]!;
+          const hasLocal =
+            !!this.state.links[id] ||
+            !!this.state.bases[id] ||
+            !!this.state.conflicts[id] ||
+            this.state.queue.some((o) => o.target === id);
+          if (hasLocal) {
+            this.state.tasks[id] = { ...prev, is_deleted: true };
+            for (const op of this.state.queue)
+              if (op.target === id && !op.error)
+                op.error =
+                  "Remote task missing or deleted; retained for inspection";
+            if (!this.state.conflicts[id] && this.state.bases[id]) {
+              const base = this.state.bases[id]!;
+              this.state.conflicts[id] = {
+                id,
+                local: base,
+                remote: fields(prev),
+                base,
+                fields: [],
+              };
+            }
+          } else {
+            delete this.state.bases[id];
+            delete this.state.links[id];
+            delete this.state.conflicts[id];
+          }
+        }
+      }
+      for (const id of Object.keys(this.state.bases)) {
+        if (
+          !this.state.tasks[id] &&
+          !this.state.queue.some((o) => o.target === id) &&
+          !this.state.conflicts[id]
+        )
+          delete this.state.bases[id];
+      }
+    } else {
+      for (const task of response.items) {
+        if (task.is_deleted) {
+          const prior = this.state.tasks[task.id];
+          this.state.tasks[task.id] = prior
+            ? { ...prior, is_deleted: true }
+            : task;
+        } else this.state.tasks[task.id] = task;
+      }
     }
     for (const project of response.projects) {
       if (project.is_deleted) delete this.state.projects[project.id];
@@ -190,6 +252,7 @@ export class SyncEngine {
   private async run(): Promise<void> {
     this.status = "Syncing";
     this.emit();
+    let duplicateWarning = "";
     try {
       const account = await this.api.account();
       if (this.state.accountId && account !== this.state.accountId)
@@ -202,7 +265,7 @@ export class SyncEngine {
       this.apply(response);
       await this.port.save();
       if (this.port.writer()) {
-        await this.collect();
+        duplicateWarning = await this.collect();
         if (this.stopped) return;
         this.checkQueue();
         const eligible = this.state.queue.filter(
@@ -268,19 +331,28 @@ export class SyncEngine {
             ) {
               const remote = this.state.tasks[op.target];
               const baseline = op.noteBaseline ?? op.base;
-              if (remote && baseline)
-                await this.acknowledge(op.target, baseline, fields(remote));
+              if (remote && baseline) {
+                try {
+                  await this.acknowledge(op.target, baseline, fields(remote));
+                } catch {
+                  // One note race must not fail the whole run.
+                }
+              }
             }
           }
         }
-        await this.pull();
+        try {
+          await this.pull();
+        } catch {
+          // Pull races defer to the next run; batch work above is retained.
+        }
       }
       if (this.stopped) return;
       this.state.lastSync = this.port.now();
       this.failures = 0;
       this.retryAt = 0;
       this.status = this.port.writer() ? "Connected" : "Read-only";
-      this.error = "";
+      this.error = duplicateWarning;
       await this.port.save();
     } catch (error) {
       if (this.stopped) return;
@@ -336,130 +408,181 @@ export class SyncEngine {
           "Description changed in Todoist; reopen the editor and compare before retry";
     }
   }
-  private async collect(): Promise<void> {
-    const identities = new Set<string>();
+  private async collect(): Promise<string> {
+    const counts = new Map<string, number>();
     for (const path of await this.port.notes.paths()) {
-      for (const line of scan(
-        await this.port.notes.read(path),
-        this.state.settings.marker,
-        this.state.settings.defaultProject,
-      )) {
-        if (line.key) {
-          if (identities.has(line.key))
-            throw new Error(
-              "Duplicate Markdown task identity; remove the copied Flowstitch comment before syncing",
-            );
-          identities.add(line.key);
-        }
+      let lines: LinkedLine[] = [];
+      try {
+        lines = scan(
+          await this.port.notes.read(path),
+          this.state.settings.marker,
+          this.state.settings.defaultProject,
+        );
+      } catch {
+        continue;
+      }
+      for (const line of lines) {
+        if (line.key) counts.set(line.key, (counts.get(line.key) ?? 0) + 1);
       }
     }
+    const duplicates = new Set(
+      [...counts.entries()].filter(([, n]) => n > 1).map(([k]) => k),
+    );
     for (const path of await this.port.notes.paths()) {
-      if (this.stopped || !this.port.writer()) return;
-      let text = await this.port.notes.read(path);
-      const prepared = prepare(
-        text,
-        this.state.settings.marker,
-        this.state.settings.defaultProject,
-        this.port.notes.optIn(path),
-      );
-      if (text !== prepared) {
-        await this.port.notes.process(path, (t) => (t === text ? prepared : t));
+      if (this.stopped || !this.port.writer()) return "";
+      let text: string;
+      try {
         text = await this.port.notes.read(path);
+      } catch {
+        continue;
       }
-      for (const line of scan(
-        text,
-        this.state.settings.marker,
-        this.state.settings.defaultProject,
-        this.port.notes.optIn(path),
-      )) {
-        if (!line.key) continue;
-        const pendingId = this.state.links["pending:" + line.key]?.path;
-        if (!line.id && pendingId) {
-          const task = this.state.tasks[pendingId];
-          if (task) {
-            await this.write(path, line, fields(task), pendingId);
+      let prepared = text;
+      try {
+        prepared = prepare(
+          text,
+          this.state.settings.marker,
+          this.state.settings.defaultProject,
+          this.port.notes.optIn(path),
+        );
+        if (text !== prepared) {
+          await this.port.notes.process(path, (t) =>
+            t === text ? prepared : t,
+          );
+          try {
+            text = await this.port.notes.read(path);
+          } catch {
             continue;
           }
         }
-        if (!line.id) {
-          if (
-            !line.value.checked &&
-            !this.state.queue.some((o) => o.command.uuid === line.key)
-          )
-            await this.create(
-              {
-                ...this.args(line.value),
-                description: `[Open source note](${this.noteUri(path)})`,
-                auto_reminder: false,
-              },
-              path,
-              line.key,
-            );
+      } catch {
+        continue;
+      }
+      let lines: LinkedLine[];
+      try {
+        lines = scan(
+          text,
+          this.state.settings.marker,
+          this.state.settings.defaultProject,
+          this.port.notes.optIn(path),
+        );
+      } catch {
+        continue;
+      }
+      for (const line of lines) {
+        if (!line.key || duplicates.has(line.key)) continue;
+        try {
+          await this.collectLine(path, line);
+        } catch {
           continue;
         }
-        const remote = this.state.tasks[line.id];
-        this.state.links[line.id] = { ...this.state.links[line.id], path };
-        if (!remote || remote.is_deleted) continue;
-        const base = this.state.bases[line.id];
-        if (!base) {
-          if (!equal(line.value, fields(remote))) {
-            this.state.conflicts[line.id] = {
-              id: line.id,
-              local: line.value,
-              remote: fields(remote),
-              base: fields(remote),
-              fields: fieldKeys.filter(
-                (k) => !equal(line.value[k], fields(remote)[k]),
-              ),
-            };
-          } else this.state.bases[line.id] = fields(remote);
-          continue;
-        }
-        if (this.state.conflicts[line.id]) {
-          this.state.conflicts[line.id]!.local = line.value;
-          this.state.conflicts[line.id]!.remote = fields(remote);
-          continue;
-        }
-        const queued = this.state.queue.filter((o) => o.target === line.id);
-        if (queued.length) {
-          for (const op of queued) {
-            if (op.base && op.desired) {
-              const r = reconcile(op.base, op.desired, fields(remote));
-              if (r.conflicts.length)
-                this.state.conflicts[line.id] = {
-                  id: line.id,
-                  local: op.desired,
-                  remote: fields(remote),
-                  base: op.base,
-                  fields: r.conflicts,
-                };
-            }
-          }
-          continue;
-        }
-        const result = reconcile(base, line.value, fields(remote));
-        if (
-          result.merged.content === remote.content &&
-          line.value.content !== remote.content &&
-          losesContext(line.value.content, remote.content) &&
-          !result.conflicts.includes("content")
-        )
-          result.conflicts.push("content");
-        if (result.conflicts.length) {
-          this.state.conflicts[line.id] = {
-            id: line.id,
-            local: line.value,
-            remote: fields(remote),
-            base,
-            fields: result.conflicts,
-          };
-          continue;
-        }
-        if (!equal(result.merged, fields(remote)))
-          await this.edit(remote, result.merged, undefined, line.value);
       }
     }
     await this.port.save();
+    if (duplicates.size) {
+      return "Duplicate Markdown task identity; remove the copied Flowstitch comment before syncing";
+    }
+    return "";
+  }
+  private async collectLine(path: string, line: LinkedLine): Promise<void> {
+    const pendingId = this.state.links["pending:" + line.key]?.path;
+    if (!line.id && pendingId) {
+      const task = this.state.tasks[pendingId];
+      if (task) {
+        if (line.value.checked && !task.checked) {
+          const merged = { ...fields(task), checked: true };
+          await this.write(path, line, merged, pendingId);
+          if (
+            !this.state.queue.some((o) => o.target === pendingId && !o.error)
+          ) {
+            await this.enqueue(
+              { type: "item_close", uuid: uuid(), args: { id: pendingId } },
+              {
+                target: pendingId,
+                base: fields(task),
+                desired: merged,
+                noteBaseline: merged,
+              },
+            );
+          }
+        } else {
+          await this.write(path, line, fields(task), pendingId);
+        }
+        return;
+      }
+    }
+    if (!line.id) {
+      if (!this.state.queue.some((o) => o.command.uuid === line.key))
+        await this.create(
+          {
+            ...this.args(line.value),
+            description: `[Open source note](${this.noteUri(path)})`,
+            auto_reminder: false,
+          },
+          path,
+          line.key,
+        );
+      return;
+    }
+    const remote = this.state.tasks[line.id];
+    this.state.links[line.id] = { ...this.state.links[line.id], path };
+    if (!remote || remote.is_deleted) return;
+    const base = this.state.bases[line.id];
+    if (!base) {
+      if (!equal(line.value, fields(remote))) {
+        this.state.conflicts[line.id] = {
+          id: line.id,
+          local: line.value,
+          remote: fields(remote),
+          base: fields(remote),
+          fields: fieldKeys.filter(
+            (k) => !equal(line.value[k], fields(remote)[k]),
+          ),
+        };
+      } else this.state.bases[line.id] = fields(remote);
+      return;
+    }
+    if (this.state.conflicts[line.id]) {
+      this.state.conflicts[line.id]!.local = line.value;
+      this.state.conflicts[line.id]!.remote = fields(remote);
+      return;
+    }
+    const queued = this.state.queue.filter((o) => o.target === line.id);
+    if (queued.length) {
+      for (const op of queued) {
+        if (op.base && op.desired) {
+          const r = reconcile(op.base, op.desired, fields(remote));
+          if (r.conflicts.length)
+            this.state.conflicts[line.id] = {
+              id: line.id,
+              local: op.desired,
+              remote: fields(remote),
+              base: op.base,
+              fields: r.conflicts,
+            };
+        }
+      }
+      return;
+    }
+    const result = reconcile(base, line.value, fields(remote));
+    if (
+      result.merged.content === remote.content &&
+      line.value.content !== remote.content &&
+      losesContext(line.value.content, remote.content) &&
+      !result.conflicts.includes("content")
+    )
+      result.conflicts.push("content");
+    if (result.conflicts.length) {
+      this.state.conflicts[line.id] = {
+        id: line.id,
+        local: line.value,
+        remote: fields(remote),
+        base,
+        fields: result.conflicts,
+      };
+      return;
+    }
+    if (!equal(result.merged, fields(remote)))
+      await this.edit(remote, result.merged, undefined, line.value);
   }
   private args(value: Fields): Record<string, unknown> {
     return {
@@ -493,44 +616,77 @@ export class SyncEngine {
     remote: Fields,
   ): Promise<void> {
     for (const path of await this.port.notes.paths()) {
-      const text = await this.port.notes.read(path);
-      const line = scan(
-        text,
-        this.state.settings.marker,
-        this.state.settings.defaultProject,
-      ).find((l) => l.id === id);
-      if (line && equal(line.value, baseline))
-        await this.write(path, line, remote, id);
+      let text: string;
+      try {
+        text = await this.port.notes.read(path);
+      } catch {
+        continue;
+      }
+      let line;
+      try {
+        line = scan(
+          text,
+          this.state.settings.marker,
+          this.state.settings.defaultProject,
+        ).find((l) => l.id === id);
+      } catch {
+        continue;
+      }
+      if (line && equal(line.value, baseline)) {
+        try {
+          await this.write(path, line, remote, id);
+        } catch {
+          continue;
+        }
+      }
     }
   }
   private async pull(): Promise<void> {
     for (const path of await this.port.notes.paths()) {
       if (this.stopped || !this.port.writer()) return;
-      const text = await this.port.notes.read(path);
-      for (const line of scan(
-        text,
-        this.state.settings.marker,
-        this.state.settings.defaultProject,
-        this.port.notes.optIn(path),
-      )) {
-        const id = line.id ?? this.state.links["pending:" + line.key]?.path;
-        if (
-          !id ||
-          this.state.conflicts[id] ||
-          this.state.queue.some((o) => o.target === id)
-        )
-          continue;
-        const remote = this.state.tasks[id];
-        if (!remote || remote.is_deleted) continue;
-        const base = this.state.bases[id];
-        if (base && line.id) {
-          const result = reconcile(base, line.value, fields(remote));
-          if (result.conflicts.length || !equal(result.merged, fields(remote)))
+      let text: string;
+      try {
+        text = await this.port.notes.read(path);
+      } catch {
+        continue;
+      }
+      let lines: LinkedLine[];
+      try {
+        lines = scan(
+          text,
+          this.state.settings.marker,
+          this.state.settings.defaultProject,
+          this.port.notes.optIn(path),
+        );
+      } catch {
+        continue;
+      }
+      for (const line of lines) {
+        try {
+          const id = line.id ?? this.state.links["pending:" + line.key]?.path;
+          if (
+            !id ||
+            this.state.conflicts[id] ||
+            this.state.queue.some((o) => o.target === id && !o.error)
+          )
             continue;
+          const remote = this.state.tasks[id];
+          if (!remote || remote.is_deleted) continue;
+          const base = this.state.bases[id];
+          if (base && line.id) {
+            const result = reconcile(base, line.value, fields(remote));
+            if (
+              result.conflicts.length ||
+              !equal(result.merged, fields(remote))
+            )
+              continue;
+          }
+          if (!line.id || !equal(line.value, fields(remote)))
+            await this.write(path, line, fields(remote), id);
+          else this.state.bases[id] = fields(remote);
+        } catch {
+          continue;
         }
-        if (!line.id || !equal(line.value, fields(remote)))
-          await this.write(path, line, fields(remote), id);
-        else this.state.bases[id] = fields(remote);
       }
     }
     await this.port.save();

@@ -67,8 +67,10 @@ export function rescheduleDue(
       ? zonedDateTime(date, clock, destinationZone)
       : date + "T" + clock + ":00"
     : date;
+  const base = { ...(previous ?? {}) } as Due;
+  if (!base.is_recurring) delete (base as Partial<Due>).string;
   return {
-    ...(previous ?? {}),
+    ...base,
     date: value,
     ...(fixed ? { timezone: destinationZone } : {}),
   };

@@ -38,21 +38,39 @@ export function dateKey(date: Date, zone: string): string {
     .join("-");
 }
 export function taskDate(date: string, zone: string): string {
-  return /Z$|[+-]\d\d:\d\d$/.test(date)
-    ? dateKey(new Date(date), zone)
-    : date.slice(0, 10);
+  if (!date || typeof date !== "string") return "";
+  if (/Z$|[+-]\d\d:\d\d$/.test(date)) {
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return date.slice(0, 10);
+    try {
+      return dateKey(parsed, zone);
+    } catch {
+      return date.slice(0, 10);
+    }
+  }
+  return date.slice(0, 10);
 }
 export function tomorrow(zone: string): string {
   return dateKey(new Date(Date.now() + 86400000), zone);
 }
 export function formatDue(date: string, zone: string): string {
-  if (date.length === 10) return date;
-  if (/Z$|[+-]\d\d:\d\d$/.test(date))
-    return new Intl.DateTimeFormat("en-GB", {
-      timeZone: zone,
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(date));
+  if (!date || typeof date !== "string") return "";
+  if (date.length === 10)
+    return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : date.slice(0, 10);
+  if (/Z$|[+-]\d\d:\d\d$/.test(date)) {
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime()))
+      return date.replace("T", " ").slice(0, 16);
+    try {
+      return new Intl.DateTimeFormat("en-GB", {
+        timeZone: zone,
+        dateStyle: "medium",
+        timeStyle: "short",
+      }).format(parsed);
+    } catch {
+      return date.replace("T", " ").slice(0, 16);
+    }
+  }
   return date.replace("T", " ").slice(0, 16);
 }
 export function template(text: string, values: Record<string, string>): string {
