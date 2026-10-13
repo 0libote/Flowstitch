@@ -17,10 +17,10 @@ jobs:
       - run: npm run package
       - name: Verify versions.json mapping matches manifest
         run: |
-          node -e "const m=require('./manifest.json');const v=require('./versions.json');if(v[m.version]!==m.minAppVersion){console.error(\`versions.json[${m.version}] (${v[m.version]}) does not match manifest minAppVersion (${m.minAppVersion})\`);process.exit(1)}console.log(\`versions.json ${m.version} -> ${m.minAppVersion} ok\`)"
+          node -e 'const m=require("./manifest.json");const v=require("./versions.json");if(v[m.version]!==m.minAppVersion){console.error("versions.json["+m.version+"] ("+v[m.version]+") does not match manifest minAppVersion ("+m.minAppVersion+")");process.exit(1)}console.log("versions.json "+m.version+" -> "+m.minAppVersion+" ok")'
       - name: Verify SHA256SUMS after package
         run: |
-          node -e "const fs=require('fs'),crypto=require('crypto');const sums=JSON.parse(fs.readFileSync('dist/SHA256SUMS.json','utf8'));for(const [f,h] of Object.entries(sums)){const actual=crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');if(actual!==h){console.error(\`Checksum mismatch for ${f}\`);process.exit(1)}}console.log('SHA256SUMS verified')"
+          node -e 'const fs=require("fs"),crypto=require("crypto");const sums=JSON.parse(fs.readFileSync("dist/SHA256SUMS.json","utf8"));for(const [f,h] of Object.entries(sums)){const actual=crypto.createHash("sha256").update(fs.readFileSync(f)).digest("hex");if(actual!==h){console.error("Checksum mismatch for "+f);process.exit(1)}}console.log("SHA256SUMS verified")'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: flowstitch-beta
