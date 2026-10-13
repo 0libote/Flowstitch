@@ -39,6 +39,18 @@ export class ConnectionModal extends Modal {
       cls: "flowstitch-muted",
     });
     let token = "";
+    let tokenInput: HTMLInputElement | null = null;
+    const formError = this.contentEl.createEl("p", {
+      cls: "flowstitch-form-error",
+      attr: { role: "alert" },
+    });
+    formError.style.display = "none";
+    const showError = (message: string): void => {
+      formError.textContent = message;
+      formError.style.display = "";
+      tokenInput?.setAttribute("aria-invalid", "true");
+      tokenInput?.focus();
+    };
     new Setting(this.contentEl)
       .setName("Personal API token")
       .setDesc(
@@ -47,8 +59,14 @@ export class ConnectionModal extends Modal {
       .addText((t) => {
         t.inputEl.type = "password";
         t.inputEl.autocomplete = "off";
+        tokenInput = t.inputEl;
         t.setPlaceholder("Paste your Todoist token").onChange((v) => {
           token = v.trim();
+          if (token) {
+            formError.textContent = "";
+            formError.style.display = "none";
+            t.inputEl.removeAttribute("aria-invalid");
+          }
         });
       });
     this.contentEl.createEl("p", {
@@ -59,19 +77,31 @@ export class ConnectionModal extends Modal {
       this.contentEl,
       "Connect and discover projects",
       async () => {
-        if (!token) throw new Error("Paste your token first (step 2 above)");
-        this.plugin.app.secretStorage.setSecret(
-          this.plugin.state.settings.secretName,
-          token,
-        );
-        await this.plugin.engine.sync(true);
-        if (
-          this.plugin.engine.status === "Authentication required" ||
-          this.plugin.engine.error
-        )
-          throw new Error(
-            `${this.plugin.engine.error || "Todoist rejected the token"}. Re-copy the full token from the Developer tab and try again.`,
+        try {
+          if (!token) {
+            showError("Paste your token first (step 2 above)");
+            throw new Error("Paste your token first (step 2 above)");
+          }
+          this.plugin.app.secretStorage.setSecret(
+            this.plugin.state.settings.secretName,
+            token,
           );
+          await this.plugin.engine.sync(true);
+          if (
+            this.plugin.engine.status === "Authentication required" ||
+            this.plugin.engine.error
+          ) {
+            const message = `${this.plugin.engine.error || "Todoist rejected the token"}. Re-copy the full token from the Developer tab and try again.`;
+            showError(message);
+            throw new Error(message);
+          }
+        } catch (error) {
+          if (!formError.textContent)
+            showError(
+              error instanceof Error ? error.message : "Connection failed",
+            );
+          throw error;
+        }
         const work = Object.values(this.plugin.state.projects).find(
           (p) => p.name === "Work",
         );
@@ -81,14 +111,20 @@ export class ConnectionModal extends Modal {
         this.contentEl.empty();
         this.contentEl.createEl("p", {
           text: "Connected. Your existing tasks and projects were loaded. Nothing else was created or changed in Todoist.",
+          attr: { role: "status" },
         });
         this.contentEl.createEl("p", {
           text: "Next: open the dashboard to browse tasks. When ready, turn on writing on one device in Flowstitch settings to sync Markdown checkboxes.",
         });
-        button(this.contentEl, "Open dashboard", async () => {
+        const openBtn = button(this.contentEl, "Open dashboard", async () => {
           this.close();
           await this.plugin.openDashboard(false);
+          const dashboard = document.querySelector(
+            ".flowstitch",
+          ) as HTMLElement | null;
+          dashboard?.focus();
         });
+        openBtn.focus();
       },
       "mod-cta",
     );
@@ -138,11 +174,42 @@ export class TaskModal extends Modal {
       : "";
     let createNote = false;
     let steps = false;
+    let titleInput: HTMLInputElement | null = null;
+    let dueInput: HTMLInputElement | null = null;
+    let timeInput: HTMLInputElement | null = null;
+    let noteInput: HTMLInputElement | null = null;
+    let parentSelect: HTMLSelectElement | null = null;
+    const formError = this.contentEl.createEl("p", {
+      cls: "flowstitch-form-error",
+      attr: { role: "alert" },
+    });
+    formError.style.display = "none";
+    const fail = (message: string, input?: HTMLElement | null): never => {
+      formError.textContent = message;
+      formError.style.display = "";
+      if (input) {
+        input.setAttribute("aria-invalid", "true");
+        (input as HTMLElement).focus();
+      }
+      throw new Error(message);
+    };
+    const clearFieldError = (input: HTMLElement | null): void => {
+      input?.removeAttribute("aria-invalid");
+      if (formError.textContent) {
+        formError.textContent = "";
+        formError.style.display = "none";
+      }
+    };
     const nameSetting = new Setting(this.contentEl)
       .setName(this.preset ? "Article title" : "Task name")
       .addText((t) => {
+        titleInput = t.inputEl;
         t.setValue(title).onChange((v) => {
           title = v;
+          if (v.trim()) {
+            clearFieldError(titleInput);
+            formError.textContent = "";
+          }
         });
         t.inputEl.addEventListener("keydown", (e) => {
           if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
@@ -167,18 +234,24 @@ export class TaskModal extends Modal {
           ? "Leave blank to preserve the recurring rule. Rescheduling preserves its rule."
           : "Natural language, such as tomorrow or every weekday. Blank preserves an existing date.",
       )
-      .addText((t) =>
-        t.setPlaceholder(this.task?.due?.string ?? "tomorrow").onChange((v) => {
-          due = v;
-        }),
-      );
+      .addText((t) => {
+        dueInput = t.inputEl;
+        return t
+          .setPlaceholder(this.task?.due?.string ?? "tomorrow")
+          .onChange((v) => {
+            due = v;
+            clearFieldError(dueInput);
+          });
+      });
     new Setting(this.contentEl)
       .setName("Time")
       .setDesc("Optional HH:mm; appended to natural language dates.")
       .addText((t) => {
         t.inputEl.type = "time";
+        timeInput = t.inputEl;
         t.onChange((v) => {
           time = v;
+          clearFieldError(timeInput);
         });
       });
     new Setting(this.contentEl).setName("Priority").addDropdown((d) => {
@@ -213,21 +286,26 @@ export class TaskModal extends Modal {
           (t) => !t.checked && !t.is_deleted && t.id !== this.task?.id,
         ))
           d.addOption(t.id, t.content.slice(0, 70));
+        parentSelect = (d as unknown as { selectEl: HTMLSelectElement })
+          .selectEl;
         d.setValue(parent).onChange((v) => {
           parent = v;
+          clearFieldError(parentSelect);
         });
       });
     new Setting(this.contentEl)
       .setName("Related note")
       .setDesc("Vault-relative Markdown path. Only the link is attached.")
-      .addText((t) =>
-        t
+      .addText((t) => {
+        noteInput = t.inputEl;
+        return t
           .setValue(note)
           .setPlaceholder("Suppliers/Example.md")
           .onChange((v) => {
             note = v;
-          }),
-      );
+            clearFieldError(noteInput);
+          });
+      });
     new Setting(this.contentEl)
       .setName("Heading or block")
       .setDesc(
@@ -262,14 +340,14 @@ export class TaskModal extends Modal {
       this.contentEl,
       this.task ? "Save changes" : "Capture task",
       async () => {
-        if (!title.trim()) throw new Error("Enter a task name");
+        if (!title.trim()) fail("Enter a task name", titleInput);
         if (!this.plugin.canWrite())
-          throw new Error("Enable writing on this device in settings");
+          fail("Enable writing on this device in settings");
         if (parent && this.plugin.state.tasks[parent]?.project_id !== project)
-          throw new Error("Parent must belong to the selected project");
+          fail("Parent must belong to the selected project", parentSelect);
         let resolvedNote = note.trim() ? normalizePath(note.trim()) : "";
         if (resolvedNote && !this.plugin.app.vault.getFileByPath(resolvedNote))
-          throw new Error("Related note does not exist");
+          fail("Related note does not exist", noteInput);
         let content = title.trim();
         let desc = description;
         const key = uuid();
@@ -278,14 +356,21 @@ export class TaskModal extends Modal {
           content = template(this.preset.content, values);
           desc = template(this.preset.description, values);
           if (createNote) {
+            let safeName: string;
+            try {
+              safeName = safeNoteName(title);
+            } catch {
+              fail("Choose a valid note title", titleInput);
+            }
             resolvedNote = normalizePath(
               (this.preset.folder ? this.preset.folder + "/" : "") +
-                safeNoteName(title) +
+                safeName! +
                 ".md",
             );
             if (this.plugin.app.vault.getAbstractFileByPath(resolvedNote))
-              throw new Error(
+              fail(
                 "Matching note already exists; choose a different title",
+                titleInput,
               );
             await this.plugin.ensureFolder(this.preset.folder);
             await this.plugin.app.vault.create(
@@ -321,9 +406,9 @@ export class TaskModal extends Modal {
             due &&
             !/^\d{4}-\d{2}-\d{2}$/.test(due)
           )
-            throw new Error("Use YYYY-MM-DD to reschedule a recurring task");
+            fail("Use YYYY-MM-DD to reschedule a recurring task", dueInput);
           if (time && !due)
-            throw new Error("Enter a date when changing the time");
+            fail("Enter a date when changing the time", timeInput);
           if (due)
             desired.due = this.task.due?.is_recurring
               ? rescheduleDue(
@@ -435,6 +520,22 @@ export class PresetModal extends Modal {
           subtasks: [],
         };
     let descriptionInput: TextAreaComponent | undefined;
+    const fieldInputs = new Map<string, HTMLElement>();
+    const formError = this.contentEl.createEl("p", {
+      cls: "flowstitch-form-error",
+      attr: { role: "alert" },
+    });
+    formError.style.display = "none";
+    const fail = (message: string, field?: string): never => {
+      formError.textContent = message;
+      formError.style.display = "";
+      const input = field ? fieldInputs.get(field) : undefined;
+      if (input) {
+        input.setAttribute("aria-invalid", "true");
+        (input as HTMLElement).focus();
+      }
+      throw new Error(message);
+    };
     for (const key of [
       "name",
       "content",
@@ -459,8 +560,19 @@ export class PresetModal extends Modal {
         )
         .addTextArea((t) => {
           if (key === "description") descriptionInput = t;
+          fieldInputs.set(
+            key,
+            (t as unknown as { inputEl: HTMLElement }).inputEl,
+          );
           t.setValue(value[key]).onChange((v) => {
             value[key] = v;
+            if (v.trim()) {
+              (
+                t as unknown as { inputEl: HTMLElement }
+              ).inputEl.removeAttribute("aria-invalid");
+              formError.textContent = "";
+              formError.style.display = "none";
+            }
           });
         });
     new Setting(this.contentEl).setName("Default priority").addDropdown((d) => {
@@ -516,8 +628,13 @@ export class PresetModal extends Modal {
       this.contentEl,
       "Save preset",
       async () => {
-        if (!value.name.trim() || !value.content.trim())
-          throw new Error("Name and title template are required");
+        if (!value.name.trim()) fail("Name is required", "name");
+        if (!value.content.trim())
+          fail("Title template is required", "content");
+        if (!value.noteTemplate.trim())
+          fail("Note template must not be empty", "noteTemplate");
+        if (value.folder.includes(".."))
+          fail("Folder must remain inside the vault", "folder");
         const list = this.plugin.state.settings.presets;
         const index = list.findIndex((p) => p.id === value.id);
         if (index < 0) list.push(value);
