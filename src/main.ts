@@ -630,9 +630,15 @@ export default class Flowstitch extends Plugin {
     const date = (
       moment as unknown as (value: string) => { format(format: string): string }
     )(dateKey(new Date(), settings.timezone)).format(settings.dailyFormat);
-    const folder = settings.dailyFolder
-      ? resolveVaultPath(settings.dailyFolder)
-      : "";
+    let folder = "";
+    try {
+      folder = settings.dailyFolder
+        ? resolveVaultPath(settings.dailyFolder)
+        : "";
+    } catch {
+      new Notice("Daily Note folder is invalid; check Flowstitch settings.");
+      return;
+    }
     const path = (folder ? folder + "/" : "") + date + ".md";
     let file = this.app.vault.getFileByPath(path);
     if (!file) {

@@ -91,7 +91,9 @@ export function truncateUi(value: string, max = 80): string {
 
 export function isValidAnchor(anchor: string): boolean {
   if (!anchor) return true;
-  if (anchor.length > 200 || /[\r\n#[\]()<>]/.test(anchor)) return false;
+  // Parentheses are allowed: noteUri() encodes them as %28/%29, so they are
+  // safe in Markdown links and openLinkText. #, brackets and controls are not.
+  if (anchor.length > 200 || /[\r\n#[\]<>]/.test(anchor)) return false;
   if (anchor.startsWith("^")) return /^\^[A-Za-z0-9-]+$/.test(anchor);
   if (anchor.includes("<!--") || anchor.includes("-->")) return false;
   return anchor.trim().length > 0;
@@ -108,8 +110,9 @@ export function resolveVaultPath(input: string): string {
     if (!part || part === "." || part === "..")
       throw new Error("Folder must remain inside the vault");
     // Allowlist: no control/bidi isolates, no characters illegal on common filesystems.
+    // \r and \n are covered by \u0000-\u001F; keep them out to avoid duplicates.
     if (
-      /[\\:*?"<>|#\[\]\r\n\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/.test(
+      /[\\:*?"<>|#[\]\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/.test(
         part,
       )
     )

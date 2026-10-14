@@ -76,9 +76,11 @@ it("strips unicode controls from note names and validates anchors", () => {
   expect(safeNoteName("a\u202Eb")).toBe("ab");
   expect(safeNoteName("  ok  ")).toBe("ok");
   expect(isValidAnchor("Prices")).toBe(true);
+  expect(isValidAnchor("Prices (2024)")).toBe(true);
   expect(isValidAnchor("^supplier-1")).toBe(true);
   expect(isValidAnchor("bad\nanchor")).toBe(false);
   expect(isValidAnchor("a#b")).toBe(false);
+  expect(isValidAnchor("a[b]")).toBe(false);
   expect(isValidAnchor("<!--x-->")).toBe(false);
 });
 
