@@ -38,6 +38,7 @@ it("registers functional command entrypoints and disposes listeners/commands on 
       "open-sidebar",
       "quick-capture",
       "connect",
+      "disconnect",
       "sync-now",
       "diagnostics",
       "link-current-line",
@@ -58,7 +59,7 @@ it("registers functional command entrypoints and disposes listeners/commands on 
   expect(plugin.canWrite()).toBe(false);
   const reloaded = new Flowstitch(app, manifest);
   await reloaded.onload();
-  expect(commands).toHaveLength(14);
+  expect(commands).toHaveLength(15);
   reloaded.unload();
   expect(events).toBe(0);
 });

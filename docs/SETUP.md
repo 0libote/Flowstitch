@@ -2,7 +2,7 @@
 
 Use a backup of your vault for first testing. Install the three built plugin files: main.js, manifest.json and styles.css. Do not copy node_modules into your vault. Enable Flowstitch in Obsidian Community plugins. Minimum supported app version is 1.11.4 because authentication uses public SecretStorage APIs.
 
-Run **Connect Todoist** and paste a personal token from Todoist → Settings → Integrations → Developer. The wizard verifies the account and discovers projects/tasks. Existing routines and Website news [MASTER TEMPLATE] remain unchanged. Credentials are device-local; connecting another device is a separate step. Switching to a different Todoist account is blocked when existing sync data belongs to the first account.
+Run **Connect Todoist** and paste a personal token from Todoist → Settings → Integrations → Developer. The wizard verifies the account and discovers projects/tasks. Existing routines and Website news [MASTER TEMPLATE] remain unchanged. Credentials are device-local; connecting another device is a separate step. Switching to a different Todoist account is blocked when existing sync data belongs to the first account. Use **Disconnect Todoist** (settings or command palette) to clear the token from Secret Storage on that device and reset the local sync token.
 
 The dashboard initially works read-only. Enable **Writing on this device** in Flowstitch settings to create/edit/complete remote tasks and synchronise opted-in note tasks. Pick one writer for the same vault. Settings and cache can be synchronised with vault tools, but writer activation uses Obsidian's device-local, vault-specific storage.
 
@@ -30,6 +30,8 @@ Folder scopes are optional and powerful: each checkbox in selected folders becom
 
 Use the Heading or block capture field for an existing heading name or ^block-id; Flowstitch does not change the note to invent a block. **Link current note to Todoist project** explicitly writes only the flowstitch-project frontmatter property. Capture uses that project as a default, and a related block shows its tasks. Disable Contextual project defaults to keep capture defaults fixed.
 
+Attaching a note sends an `obsidian://open?vault=...&file=...` link to Todoist, which includes your vault name. The capture dialog previews the exact link before create/edit so you can remove the note link if you do not want the vault name stored remotely.
+
 ## Daily Notes and planning
 
 Add a Flowstitch code block to the template used by native Daily Notes, Templater or QuickAdd. This is the safest automatic morning integration: those tools open/create the note, and Flowstitch renders the live view. No internal APIs of those plugins are used.
@@ -48,8 +50,12 @@ Launch, choose the article title and optional date/time, then optionally enable 
 
 ## Troubleshooting
 
-Open Sync diagnostics for connection state, last sync, queue counts, retries and conflicts. Compare displays task field values locally; View sanitised report shows version, status, counts and the last error in a modal for manual copy and excludes titles, descriptions, tokens and paths. Keep Obsidian/Keep Todoist require explicit selection. Closing the dialog defers conflicts. Rejected operations are retained; retry after correcting the issue. A description changed remotely is held for inspection, because replacing it could lose information. Review the retained operation, copy any text to keep, then explicitly discard that rejected queue entry before editing again. Remote tasks and notes are not deleted.
+Open Sync diagnostics for connection state, last sync, queue counts, retries and conflicts. Compare displays task field values locally; View sanitised report shows version, status, counts and the last error in a modal for manual copy and excludes titles, descriptions, tokens and paths. Keep Obsidian/Keep Todoist require explicit selection. Closing the dialog defers conflicts. Rejected operations are retained; retry after correcting the issue. A description changed remotely is held for inspection, because replacing it could lose information. Review the unsanitised local operation (local-only, never share externally), copy any text to keep, then explicitly discard that rejected queue entry before editing again. Remote tasks and notes are not deleted.
 
 Network failures retain the queue and cache; automatic retries back off. Sync now forces a request. If token authentication fails, restore/update the selected secret and Sync now. Do not delete data.json while operations are pending. To switch accounts, export preferences, back up data.json and notes, inspect pending operations in the original account, then reset local plugin data deliberately. There is no automatic destructive account-switch action.
 
 Disabling Flowstitch leaves normal readable Markdown tasks and comments. Remote tasks remain in Todoist. Tokens are managed in Obsidian Secret Storage and should be removed there if no longer needed. Plugin data contains cache/snapshots of opted-in content and remote tasks; protect it along with your vault.
+
+## Privacy and local data
+
+`data.json` lives inside your vault plugin folder, so vault sync tools (Obsidian Sync, iCloud, Git) may roam it to other devices. It contains the Todoist `sync_token`, cached tasks/projects, pending operations and note-link mappings — treat it as sensitive alongside your notes. The `sync_token` grants incremental sync access when combined with your API token; do not paste `data.json` contents into issues or shared notes. Use View sanitised report for support. Review screens labelled unsanitised local-only show raw local content and must not be shared.

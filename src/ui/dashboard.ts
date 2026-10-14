@@ -7,7 +7,16 @@ import {
 import type Flowstitch from "../main";
 import { type Task, fields, uuid } from "../types";
 import { TaskModal, PresetModal, TextModal } from "./modals";
-import { button, dateKey, taskDate, formatDue, tomorrow } from "./helpers";
+import {
+  button,
+  dateKey,
+  taskDate,
+  formatDue,
+  tomorrow,
+  truncateDisplay,
+  truncateUi,
+  isValidAnchor,
+} from "./helpers";
 export type DashboardTab =
   | "today"
   | "upcoming"
@@ -250,7 +259,10 @@ export class Dashboard {
     });
     project.createEl("option", { text: "All projects", attr: { value: "" } });
     for (const p of Object.values(this.plugin.state.projects))
-      project.createEl("option", { text: p.name, attr: { value: p.id } });
+      project.createEl("option", {
+        text: truncateDisplay(p.name, 70),
+        attr: { value: p.id },
+      });
     (project as HTMLSelectElement).value = this.project;
     project.addEventListener("change", () => {
       this.project = (project as HTMLSelectElement).value;
@@ -265,7 +277,10 @@ export class Dashboard {
       for (const s of Object.values(this.plugin.state.sections).filter(
         (s) => !this.project || s.project_id === this.project,
       ))
-        section.createEl("option", { text: s.name, attr: { value: s.id } });
+        section.createEl("option", {
+          text: truncateDisplay(s.name, 70),
+          attr: { value: s.id },
+        });
       (section as HTMLSelectElement).value = this.section;
       section.addEventListener("change", () => {
         this.section = (section as HTMLSelectElement).value;
@@ -539,7 +554,10 @@ export class Dashboard {
     const check = row.createEl("input", {
       attr: {
         type: "checkbox",
-        "aria-label": `${task.checked ? "Reopen" : "Complete"} ${task.content}`,
+        "aria-label": truncateUi(
+          `${task.checked ? "Reopen" : "Complete"} ${task.content}`,
+          80,
+        ),
       },
     }) as HTMLInputElement;
     check.checked = task.checked;
@@ -576,14 +594,17 @@ export class Dashboard {
           (task.due.is_recurring ? " ↻" : ""),
       });
     meta.createSpan({
-      text: this.plugin.state.projects[task.project_id]?.name ?? "Project",
+      text: truncateDisplay(
+        this.plugin.state.projects[task.project_id]?.name ?? "Project",
+        70,
+      ),
     });
     if (task.parent_id) {
       const parentTitle =
         this.plugin.state.tasks[task.parent_id]?.content ?? "Subtask";
       const parentBtn = button(
         meta,
-        `↳ ${parentTitle}`,
+        `↳ ${truncateDisplay(parentTitle, 70)}`,
         () => {
           const parentTask = this.plugin.state.tasks[task.parent_id!];
           if (parentTask) new TaskModal(this.plugin, parentTask).open();
@@ -598,17 +619,18 @@ export class Dashboard {
     const links = row.createDiv({ cls: "flowstitch-row-actions" });
     const note = this.plugin.state.links[task.id];
     if (note) {
+      const anchor =
+        note.anchor && isValidAnchor(note.anchor) ? `#${note.anchor}` : "";
       const noteBtn = button(links, "Note", () =>
-        this.plugin.app.workspace.openLinkText(
-          note.path + (note.anchor ? "#" + note.anchor : ""),
-          this.source,
-        ),
+        this.plugin.app.workspace.openLinkText(note.path + anchor, this.source),
       );
       noteBtn.dataset.key = `note-${task.id}`;
     }
     const openBtn = button(links, "↗", () => {
       window.open(
         `https://app.todoist.com/app/task/${encodeURIComponent(task.id)}`,
+        "_blank",
+        "noopener,noreferrer",
       );
     });
     openBtn.setAttribute("aria-label", "Open in Todoist");

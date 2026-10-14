@@ -596,7 +596,7 @@ export class SyncEngine {
   }
   // Set by the Obsidian adapter; no file-system paths transmitted.
   noteUri: (path: string) => string = (path) =>
-    `obsidian://open?file=${encodeURIComponent(path)}`;
+    `obsidian://open?file=${encodeURIComponent(path).replace(/\(/g, "%28").replace(/\)/g, "%29")}`;
   private async write(
     path: string,
     line: LinkedLine,

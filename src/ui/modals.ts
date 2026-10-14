@@ -2,14 +2,20 @@ import {
   Modal,
   Setting,
   Notice,
-  normalizePath,
   type App,
   type TextAreaComponent,
 } from "obsidian";
 import type Flowstitch from "../main";
 import { type Task, type Preset, fields, uuid } from "../types";
 import { rescheduleDue } from "../notes/dates";
-import { button, template, safeNoteName } from "./helpers";
+import {
+  button,
+  template,
+  safeNoteName,
+  truncateDisplay,
+  isValidAnchor,
+  resolveVaultPath,
+} from "./helpers";
 export class ConnectionModal extends Modal {
   constructor(private plugin: Flowstitch) {
     super(plugin.app);
@@ -70,7 +76,7 @@ export class ConnectionModal extends Modal {
         });
       });
     this.contentEl.createEl("p", {
-      text: "Only opted-in task text and links are sent to Todoist. If connecting fails, re-copy the full token without extra spaces.",
+      text: "Only opted-in task text and links are sent to Todoist. Attaching a note sends an obsidian:// link that includes your vault name. If connecting fails, re-copy the full token without extra spaces.",
       cls: "flowstitch-muted",
     });
     button(
@@ -86,6 +92,9 @@ export class ConnectionModal extends Modal {
             this.plugin.state.settings.secretName,
             token,
           );
+          // Drop the local copy once SecretStorage holds it.
+          token = "";
+          if (tokenInput) tokenInput.value = "";
           await this.plugin.engine.sync(true);
           if (
             this.plugin.engine.status === "Authentication required" ||
@@ -178,6 +187,7 @@ export class TaskModal extends Modal {
     let dueInput: HTMLInputElement | null = null;
     let timeInput: HTMLInputElement | null = null;
     let noteInput: HTMLInputElement | null = null;
+    let anchorInput: HTMLInputElement | null = null;
     let parentSelect: HTMLSelectElement | null = null;
     const formError = this.contentEl.createEl("p", {
       cls: "flowstitch-form-error",
@@ -264,7 +274,7 @@ export class TaskModal extends Modal {
     new Setting(this.contentEl).setName("Project").addDropdown((d) => {
       d.addOption("", "Todoist Inbox");
       for (const p of Object.values(this.plugin.state.projects))
-        d.addOption(p.id, p.name);
+        d.addOption(p.id, truncateDisplay(p.name, 70));
       d.setValue(project).onChange((v) => {
         project = v;
       });
@@ -285,7 +295,7 @@ export class TaskModal extends Modal {
         for (const t of Object.values(this.plugin.state.tasks).filter(
           (t) => !t.checked && !t.is_deleted && t.id !== this.task?.id,
         ))
-          d.addOption(t.id, t.content.slice(0, 70));
+          d.addOption(t.id, truncateDisplay(t.content, 70));
         parentSelect = (d as unknown as { selectEl: HTMLSelectElement })
           .selectEl;
         d.setValue(parent).onChange((v) => {
@@ -295,7 +305,9 @@ export class TaskModal extends Modal {
       });
     new Setting(this.contentEl)
       .setName("Related note")
-      .setDesc("Vault-relative Markdown path. Only the link is attached.")
+      .setDesc(
+        "Vault-relative Markdown path. Only an obsidian:// link (including your vault name) is attached.",
+      )
       .addText((t) => {
         noteInput = t.inputEl;
         return t
@@ -304,6 +316,7 @@ export class TaskModal extends Modal {
           .onChange((v) => {
             note = v;
             clearFieldError(noteInput);
+            updatePreview();
           });
       });
     new Setting(this.contentEl)
@@ -311,14 +324,38 @@ export class TaskModal extends Modal {
       .setDesc(
         "Optional existing heading name, or ^block-id. The note remains unchanged.",
       )
-      .addText((t) =>
-        t
+      .addText((t) => {
+        anchorInput = t.inputEl;
+        return t
           .setValue(anchor)
           .setPlaceholder("Prices or ^supplier")
           .onChange((v) => {
             anchor = v.trim();
-          }),
-      );
+            clearFieldError(anchorInput);
+            updatePreview();
+          });
+      });
+    const preview = this.contentEl.createEl("p", {
+      cls: "flowstitch-muted",
+    });
+    const updatePreview = (): void => {
+      const trimmed = note.trim();
+      if (!trimmed) {
+        preview.textContent = "No note link will be attached.";
+        return;
+      }
+      try {
+        const resolved = resolveVaultPath(trimmed);
+        const link = this.plugin.noteUri(
+          resolved,
+          isValidAnchor(anchor) ? anchor : "",
+        );
+        preview.textContent = `Link preview (vault name included): ${link}`;
+      } catch {
+        preview.textContent = "Link preview unavailable: invalid note path.";
+      }
+    };
+    updatePreview();
     if (this.preset) {
       new Setting(this.contentEl)
         .setName("Create matching note")
@@ -345,9 +382,18 @@ export class TaskModal extends Modal {
           fail("Enable writing on this device in settings");
         if (parent && this.plugin.state.tasks[parent]?.project_id !== project)
           fail("Parent must belong to the selected project", parentSelect);
-        let resolvedNote = note.trim() ? normalizePath(note.trim()) : "";
-        if (resolvedNote && !this.plugin.app.vault.getFileByPath(resolvedNote))
-          fail("Related note does not exist", noteInput);
+        if (anchor && !isValidAnchor(anchor))
+          fail("Heading or block reference is invalid", anchorInput);
+        let resolvedNote = "";
+        if (note.trim()) {
+          try {
+            resolvedNote = resolveVaultPath(note.trim());
+          } catch {
+            fail("Related note path is invalid", noteInput);
+          }
+          if (!this.plugin.app.vault.getFileByPath(resolvedNote))
+            fail("Related note does not exist", noteInput);
+        }
         let content = title.trim();
         let desc = description;
         const key = uuid();
@@ -362,17 +408,21 @@ export class TaskModal extends Modal {
             } catch {
               fail("Choose a valid note title", titleInput);
             }
-            resolvedNote = normalizePath(
-              (this.preset.folder ? this.preset.folder + "/" : "") +
-                safeName! +
-                ".md",
-            );
+            let folder = "";
+            try {
+              folder = this.preset.folder
+                ? resolveVaultPath(this.preset.folder)
+                : "";
+            } catch {
+              fail("Preset note folder is invalid", titleInput);
+            }
+            resolvedNote = (folder ? folder + "/" : "") + safeName! + ".md";
             if (this.plugin.app.vault.getAbstractFileByPath(resolvedNote))
               fail(
                 "Matching note already exists; choose a different title",
                 titleInput,
               );
-            await this.plugin.ensureFolder(this.preset.folder);
+            await this.plugin.ensureFolder(folder);
             await this.plugin.app.vault.create(
               resolvedNote,
               template(this.preset.noteTemplate, values),
@@ -584,7 +634,7 @@ export class PresetModal extends Modal {
     new Setting(this.contentEl).setName("Default project").addDropdown((d) => {
       d.addOption("", "Default project");
       for (const p of Object.values(this.plugin.state.projects))
-        d.addOption(p.id, p.name);
+        d.addOption(p.id, truncateDisplay(p.name, 70));
       d.setValue(value.projectId).onChange((v) => {
         value.projectId = v;
       });
@@ -610,7 +660,7 @@ export class PresetModal extends Modal {
         for (const t of Object.values(this.plugin.state.tasks).filter(
           (t) => !t.checked && t.content.includes("[MASTER TEMPLATE]"),
         ))
-          d.addOption(t.id, t.content);
+          d.addOption(t.id, truncateDisplay(t.content, 70));
         d.setValue(value.masterId ?? "").onChange((v) => {
           value.masterId = v || undefined;
           if (v)
@@ -633,8 +683,13 @@ export class PresetModal extends Modal {
           fail("Title template is required", "content");
         if (!value.noteTemplate.trim())
           fail("Note template must not be empty", "noteTemplate");
-        if (value.folder.includes(".."))
-          fail("Folder must remain inside the vault", "folder");
+        if (value.folder) {
+          try {
+            value.folder = resolveVaultPath(value.folder);
+          } catch {
+            fail("Folder must remain inside the vault", "folder");
+          }
+        }
         const list = this.plugin.state.settings.presets;
         const index = list.findIndex((p) => p.id === value.id);
         if (index < 0) list.push(value);
