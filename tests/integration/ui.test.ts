@@ -75,9 +75,12 @@ it("renders cached tasks offline and sends completion through the engine", async
   const ui = new Dashboard(h.plugin, el);
   expect(el.textContent).toContain("Review supplier prices");
   expect(el.textContent).toContain("Network unavailable");
-  expect(el.querySelector("output.flowstitch-status")?.textContent).toContain(
-    "Network unavailable",
-  );
+  const status = el.querySelector("output.flowstitch-status");
+  expect(status?.getAttribute("aria-live")).toBe("polite");
+  expect(status?.getAttribute("aria-atomic")).toBe("true");
+  expect(status?.textContent).not.toContain("Network unavailable");
+  const alert = el.querySelector('[role="alert"]');
+  expect(alert?.textContent).toContain("Network unavailable");
   expect(el.querySelectorAll("ul.flowstitch-task-list > li")).toHaveLength(1);
   expect(el.querySelector("ul > h3")).toBeNull();
   const check = el.querySelector<HTMLInputElement>("input[type=checkbox]")!;
@@ -125,6 +128,7 @@ it("searches cached tasks, switches views, and filters projects", async () => {
   const search = el.querySelector<HTMLInputElement>("input[type=search]")!;
   search.value = "missing";
   search.dispatchEvent(new Event("input"));
+  await new Promise((resolve) => setTimeout(resolve, 250));
   expect(el.textContent).not.toContain("Review supplier prices");
   const projects = Array.from(el.querySelectorAll("button")).find(
     (b) => b.textContent === "Projects",

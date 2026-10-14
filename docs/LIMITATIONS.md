@@ -1,6 +1,6 @@
 # Limitations and compatibility
 
-This is a functioning buildable 0.1.0 beta, not yet a verified community release. A real Todoist account and Obsidian desktop/iOS/Android testing are outstanding. The DOM harness is a simulation of native APIs; it cannot prove all real host behaviour.
+This is a functioning buildable 0.1.3 beta, not yet a verified community release. A real Todoist account and Obsidian desktop/iOS/Android testing are outstanding. The DOM harness is a simulation of native APIs; it cannot prove all real host behaviour. The manifest declares `isDesktopOnly: true` until the mobile gates in TESTING.md pass; desktop support itself still requires the real-host manual matrix.
 
 ## Supported scope
 
@@ -20,6 +20,7 @@ Known restrictions:
 - Work/lunch hours are configurable display preferences. Monday–Friday is the holiday assistant's working-week rule. Optional England/Wales government lookup is on demand, suggestions only; no calendar subscription or automatic first-working-day automation is installed.
 - Retry ordering is FIFO; command rejections are retained and need intervention. Stale description writes are held, not silently merged. requestUrl has no documented cancellation signal: in-flight requests can finish after unload, but subsequent local mutations/listeners are stopped.
 - Full conflict resolution, mobile keyboard/layout behaviour, Obsidian Sync interactions and platform URI handling require the real-host manual matrix. External tools can change note content or plugin data independently. No integration can promise to eliminate those races using Vault.process alone.
+- The Open native Daily Note command opens the public `obsidian://daily` URI route (see RESEARCH.md) via `window.open`. This path is unverified on mobile and in sandboxed hosts; if it proves unreliable there, use the Open daily planning note command instead, which opens the file through the workspace API.
 
 ## Plugin coexistence
 

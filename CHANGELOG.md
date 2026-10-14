@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.3 — scoped reindexing (2026-10-13)
 
 - Scoped startup and manual reindexing to linked notes, active note, and opted-in folder notes without full-vault enumeration.
 - Replaced clipboard sanitised report copy with view-only diagnostics modal.

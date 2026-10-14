@@ -185,6 +185,9 @@ export default class Flowstitch extends Plugin {
       id: "open-native-daily-note",
       name: "Open native Daily Note",
       callback: () => {
+        // Public obsidian://daily URI route (see RESEARCH.md); unverified on
+        // mobile/sandboxed hosts — use "Open daily planning note" (workspace
+        // API) if this fails there. See docs/LIMITATIONS.md.
         window.open(
           `obsidian://daily?${`vault=${encodeURIComponent(this.app.vault.getName())}`}`,
         );
@@ -1001,18 +1004,22 @@ export class FlowstitchSettings extends PluginSettingTab {
       });
     });
     define("Refresh interval", "Seconds, minimum 30.", (row) => {
-      row.addText((t) =>
-        t.setValue(String(settings.interval)).onChange(
+      row.addText((t) => {
+        const prev = String(settings.interval);
+        t.setValue(prev).onChange(
           this.handleChange(async (v) => {
             const n = Number(v);
-            if (Number.isFinite(n) && n >= 30) {
-              settings.interval = n;
-              await this.plugin.save();
-              this.plugin.restartTimer();
+            if (!Number.isFinite(n) || n < 30) {
+              new Notice("Refresh interval must be a number ≥ 30.");
+              t.setValue(prev);
+              return;
             }
+            settings.interval = n;
+            await this.plugin.save();
+            this.plugin.restartTimer();
           }),
-        ),
-      );
+        );
+      });
     });
     for (const [key, name, desc] of [
       [
@@ -1028,45 +1035,78 @@ export class FlowstitchSettings extends PluginSettingTab {
       ["timezone", "Timezone", "IANA timezone, such as Europe/London."],
     ] as const)
       define(name, desc, (row) => {
-        row.addText((t) =>
-          t.setValue(settings[key]).onChange(
+        row.addText((t) => {
+          const prev = settings[key];
+          t.setValue(prev).onChange(
             this.handleChange(async (v) => {
               if (key === "timezone") {
                 try {
                   new Intl.DateTimeFormat("en", { timeZone: v });
                 } catch {
+                  new Notice(
+                    "Invalid IANA timezone. Reverted to previous value.",
+                  );
+                  t.setValue(prev);
+                  return;
+                }
+                if (!v.trim()) {
+                  new Notice("Timezone must not be empty.");
+                  t.setValue(prev);
                   return;
                 }
               }
-              if (key === "marker" && !/^#[\w/-]+$/.test(v)) return;
+              if (key === "marker" && !/^#[\w/-]+$/.test(v)) {
+                new Notice(
+                  "Marker must look like #todo (letters, numbers, / or -). Reverted.",
+                );
+                t.setValue(prev);
+                return;
+              }
               settings[key] = v;
               await this.plugin.save();
               if (key === "marker") await this.plugin.reindex();
             }),
-          ),
-        );
+          );
+        });
       });
     define(
       "Opt-in folders",
       "One vault-relative folder per line. Every checkbox there is explicitly opted in; leave blank for marker-only sync.",
       (row) => {
-        row.addTextArea((t) =>
-          t.setValue(settings.folders.join("\n")).onChange(
+        row.addTextArea((t) => {
+          const prev = settings.folders.join("\n");
+          t.setValue(prev).onChange(
             this.handleChange(async (v) => {
-              settings.folders = v
+              const next = v
                 .split("\n")
                 .map((s) => s.trim())
-                .filter(Boolean)
-                .map((s) => resolveVaultPath(s));
+                .filter(Boolean);
+              const invalid = next.find((folder) => {
+                try {
+                  resolveVaultPath(folder);
+                  return false;
+                } catch {
+                  return true;
+                }
+              });
+              if (invalid) {
+                new Notice(
+                  `Invalid folder “${invalid}”. Folders must stay inside the vault. Reverted.`,
+                );
+                t.setValue(prev);
+                return;
+              }
+              settings.folders = next.map((s) => resolveVaultPath(s));
               await this.plugin.save();
               await this.plugin.reindex();
             }),
-          ),
-        );
+          );
+        });
       },
     );
     items = [];
     groups.push({ type: "group", heading: "Daily planning", items });
+    const isHHMM = (v: string): boolean => /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
     for (const [key, name] of [
       ["dailyHeading", "Live view heading"],
       ["dailyFolder", "Daily Note folder"],
@@ -1077,14 +1117,44 @@ export class FlowstitchSettings extends PluginSettingTab {
       ["lunchEnd", "Lunch finishes"],
     ] as const)
       define(name, "", (row) => {
-        row.addText((t) =>
-          t.setValue(settings[key]).onChange(
+        row.addText((t) => {
+          const prev = settings[key];
+          t.setValue(prev).onChange(
             this.handleChange(async (v) => {
+              if (key === "dailyHeading" || key === "dailyFormat") {
+                if (!v.trim()) {
+                  new Notice(`${name} must not be empty. Reverted.`);
+                  t.setValue(prev);
+                  return;
+                }
+              }
+              if (
+                key === "workStart" ||
+                key === "workEnd" ||
+                key === "lunchStart" ||
+                key === "lunchEnd"
+              ) {
+                if (!isHHMM(v)) {
+                  new Notice(`${name} must be HH:MM (00:00–23:59). Reverted.`);
+                  t.setValue(prev);
+                  return;
+                }
+              }
+              if (key === "dailyFolder" && v.trim()) {
+                const folder = v.trim();
+                if (folder.includes("..") || folder.startsWith("/")) {
+                  new Notice(
+                    "Daily Note folder must stay inside the vault. Reverted.",
+                  );
+                  t.setValue(prev);
+                  return;
+                }
+              }
               settings[key] = v;
               await this.plugin.save();
             }),
-          ),
-        );
+          );
+        });
       });
     define(
       "Holiday assistant",
